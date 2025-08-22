@@ -31,6 +31,7 @@ const posY = ref(0)
 // game state
 const isPlaying = ref(false) // partie affichée/démarrée
 const isAlive = ref(false)   // joueur encore en vie (peut recevoir des pièces)
+const won = ref(false)       // le joueur a gagné
 
 // drop/loop
 const softDrop = ref(false)
@@ -58,6 +59,17 @@ const flatCells = computed(() => grid.value.flat())
 const flatGridColors = computed(() => grid.value.flat())
 
 const cellStyle = (idx: number) => {
+	// Si le joueur n'est plus en vie, on n'affiche que les fantômes
+	if (!isAlive.value) {
+		for (const key in ghostGrids.value) {
+			const ghost = ghostGrids.value[key]
+			if (ghost && ghost[idx]) {
+				return { background: ghost[idx], borderColor: ghost[idx], opacity: 0.15 }
+			}
+		}
+		return {}
+	}
+
 	const isActive = activeIndexes.value.has(idx)
 	const color = isActive ? active.value?.color : flatGridColors.value[idx]
 	// overlay fantôme: si pas de couleur locale, voir si un ghost a une couleur
@@ -127,6 +139,9 @@ const trySpawnNext = () => {
 		// top-out -> spectateur
 		active.value = null
 		isAlive.value = false
+		try {
+			$socket.emit('tetris-game-over', { room: props.roomId ?? 'default', username: props.username ?? 'me' })
+		} catch {}
 	}
 }
 
@@ -179,10 +194,12 @@ const clearLines = () => {
 const lockPiece = () => {
 	mergeActiveToGrid()
 	clearLines()
-	// envoyer ma grille aux autres
-	try {
-		$socket.emit('tetris-grid', { room: props.roomId ?? 'default', username: props.username ?? 'me', grid: serializedGrid() })
-	} catch {}
+	// envoyer ma grille aux autres si encore en vie
+	if (isAlive.value) {
+		try {
+			$socket.emit('tetris-grid', { room: props.roomId ?? 'default', username: props.username ?? 'me', grid: serializedGrid() })
+		} catch {}
+	}
 	// spawn suivant si encore en vie
 	if (isAlive.value) trySpawnNext()
 }
@@ -269,12 +286,24 @@ const onUserLeft = (username: string) => {
 	delete ghostGrids.value[username]
 }
 
+const onPlayerLost = ({ username }: { username: string }) => {
+	if (username) onUserLeft(username)
+}
+
+const onWin = () => {
+	won.value = true
+	isAlive.value = false
+	active.value = null
+}
+
 onMounted(() => {
 	window.addEventListener('keydown', onKeyDown)
 	window.addEventListener('keyup', onKeyUp)
 	window.addEventListener('tetris-start', onRoomStart as EventListener)
 	$socket.on('tetris-ghost', onGhost)
 	$socket.on('user-left', onUserLeft)
+	$socket.on('player-lost', onPlayerLost)
+	$socket.on('tetris-win', onWin)
 	rafId = requestAnimationFrame(animate)
 })
 
@@ -285,6 +314,8 @@ onBeforeUnmount(() => {
 	window.removeEventListener('tetris-start', onRoomStart as EventListener)
 	$socket.off('tetris-ghost', onGhost)
 	$socket.off('user-left', onUserLeft)
+	$socket.off('player-lost', onPlayerLost)
+	$socket.off('tetris-win', onWin)
 })
 </script>
 <template>
@@ -296,13 +327,23 @@ onBeforeUnmount(() => {
 			<button @click="startGame" class="start-btn">Start Game</button>
 		</template>
 	</div>
-	<div v-else class="board" :style="{ '--cols': String(COLS), '--rows': String(ROWS) }">
-		<div
-		v-for="(_, idx) in flatCells"
-		:key="idx"
-		class="cell"
-		:style="cellStyle(idx)"
-		/>
+	<div v-else class="game-area">
+		<div class="board-container">
+			<div v-if="won" class="game-over-overlay win-overlay">
+				<span>WIN</span>
+			</div>
+			<div v-else-if="!isAlive" class="game-over-overlay">
+				<span>GAME OVER</span>
+			</div>
+			<div class="board" :style="{ '--cols': String(COLS), '--rows': String(ROWS) }">
+				<div
+				v-for="(_, idx) in flatCells"
+				:key="idx"
+				class="cell"
+				:style="cellStyle(idx)"
+				/>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -331,12 +372,45 @@ onBeforeUnmount(() => {
 	background: #7B1FA2;
 }
 
+.game-area {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100%;
+}
+
+.board-container {
+	position: relative;
+}
+
+.game-over-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background: rgba(0, 0, 0, 0.2);
+	color: white;
+	font-size: 3em;
+	font-weight: bold;
+	z-index: 10;
+	border-radius: 8px;
+}
+
+.win-overlay {
+	background: rgba(255, 215, 0, 0.3);
+	color: #FFD700;
+}
+
 .board {
-	margin: 0 auto;
+	position: relative;
 	display: grid;
 	grid-template-columns: repeat(var(--cols), 1fr);
 	gap: 2px;
-	height: 90vh;
+	height: 85vh;
 	aspect-ratio: 1 / 2;
 	background: #1f2937;
 	padding: 6px;

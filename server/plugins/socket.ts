@@ -3,8 +3,14 @@ import { toNodeListener } from "h3"
 import { createServer } from "http"
 import type { NitroApp } from "nitropack"
 
+type User = {
+  username: string
+  alive: boolean
+  socketId: string
+}
+
 type RoomState = {
-  users: string[]
+  users: User[]
   running: boolean
   lastSeed?: number
 }
@@ -38,14 +44,18 @@ export default (nitroApp: NitroApp) => {
     const state = rooms[room]
     if (!state) return
     const seen = new Set<string>()
-    state.users = state.users
-      .map(sanitizeUsername)
-      .filter((u): u is string => !!u && !seen.has(u) && (seen.add(u), true))
+    state.users = state.users.filter((u) => {
+      const name = sanitizeUsername(u.username)
+      if (!name || seen.has(name)) return false
+      seen.add(name)
+      u.username = name
+      return true
+    })
   }
 
   const emitLeader = (room: string) => {
     const state = rooms[room]
-    const leader = state?.users[0] ?? null
+    const leader = state?.users[0]?.username ?? null
     io.to(room).emit("room-leader", { username: leader })
   }
 
@@ -63,7 +73,7 @@ export default (nitroApp: NitroApp) => {
     const state = rooms[room]
     if (!state) return
     const before = state.users.length
-    state.users = state.users.filter((u) => u !== username)
+    state.users = state.users.filter((u) => u.username !== username)
     cleanRoom(room)
     if (state.users.length !== before) {
       io.to(room).emit("user-left", username)
@@ -90,7 +100,9 @@ export default (nitroApp: NitroApp) => {
       // mémoriser l'appartenance
       memberBySocket.set(socket.id, { room, username: clean })
 
-      if (!state.users.includes(clean)) state.users.push(clean)
+      if (!state.users.find(u => u.username === clean)) {
+        state.users.push({ username: clean, alive: !state.running, socketId: socket.id })
+      }
 
       // emit directly to the joining socket to avoid any race
       socket.emit("room-users", { users: state.users })
@@ -114,15 +126,44 @@ export default (nitroApp: NitroApp) => {
 
     // Lancer la partie: payload { room, seed }
     socket.on("tetris-start", ({ room, seed }: { room: string; seed: number }) => {
-      if (!rooms[room]) rooms[room] = { users: [], running: false }
-      rooms[room].running = true
-      rooms[room].lastSeed = seed
+      const state = rooms[room]
+      if (!state) return
+      state.running = true
+      state.lastSeed = seed
+      // Marquer tous les joueurs comme vivants
+      for (const user of state.users) user.alive = true
+      broadcastUsers(room) // Envoyer la liste mise à jour
       io.to(room).emit("tetris-start", { seed })
     })
 
     // Relayer les grilles: payload { room, username, grid }
     socket.on("tetris-grid", ({ room, username, grid }: { room: string; username: string; grid: string[] }) => {
       socket.to(room).emit("tetris-ghost", { username, grid })
+    })
+
+    // Un joueur a perdu
+    socket.on("tetris-game-over", ({ room, username }) => {
+      const state = rooms[room]
+      if (!state) return
+
+      const user = state.users.find(u => u.username === username)
+      if (user) user.alive = false
+
+      // Notifier tout le monde que le joueur a perdu
+      io.to(room).emit("player-lost", { username })
+      broadcastUsers(room) // Mettre à jour la liste des joueurs
+
+      // Vérifier s'il y a un gagnant
+      const alivePlayers = state.users.filter(u => u.alive)
+      if (state.running && state.users.length > 1 && alivePlayers.length === 1) {
+        const winner = alivePlayers[0]
+        if (winner) io.to(winner.socketId).emit("tetris-win")
+        state.running = false
+        io.to(room).emit("game-ended")
+      } else if (state.running && alivePlayers.length <= 1) {
+        state.running = false
+        io.to(room).emit("game-ended")
+      }
     })
 
     socket.on("disconnect", () => {

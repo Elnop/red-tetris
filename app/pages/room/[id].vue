@@ -12,9 +12,10 @@ const userStore = useUser()
 const route = useRoute()
 const roomId = route.params.id as string
 
-const users = ref<string[]>([])
+const users = ref<{ username: string; alive: boolean }[]>([])
 const leader = ref<string | null>(null)
 const isRunning = ref(false)
+const gameFinished = ref(false)
 
 onMounted(() => {
 	const username = (userStore.username ?? '').trim()
@@ -24,8 +25,7 @@ onMounted(() => {
 	}
 
 	// Register listeners BEFORE join to avoid missing the first broadcast
-	socket.on("room-users", (data: { users: string[] }) => {
-		console.log("TEST")
+	socket.on("room-users", (data: { users: { username: string; alive: boolean }[] }) => {
 		users.value = data.users
 		console.log('[room-users] users=%o', data.users)
 	})
@@ -37,6 +37,11 @@ onMounted(() => {
 	socket.on("tetris-start", ({ seed }: { seed: number }) => {
 		isRunning.value = true
 		window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
+	})
+
+	socket.on("game-ended", () => {
+		isRunning.value = false
+		gameFinished.value = true
 	})
 
 	// Now join the room
@@ -53,6 +58,10 @@ onUnmounted(() => {
 	leave()
 	window.removeEventListener("beforeunload", leave)
 	window.removeEventListener("pagehide", leave)
+	socket.off("room-users")
+	socket.off("room-leader")
+	socket.off("tetris-start")
+	socket.off("game-ended")
 })
 
 const amLeader = () => leader.value === userStore.username
@@ -69,10 +78,10 @@ const startForRoom = () => {
 		<NuxtLink to="/">Acceuil</NuxtLink>
 		<h2>Room: {{ roomId }}</h2>
 		<ul>
-			<li v-for="u in users" :key="u">{{ u }}</li>
+			<li v-for="u in users" :key="u.username" :class="{ dead: !u.alive }">{{ u.username }}</li>
 		</ul>
 		<div class="actions">
-			<button v-if="amLeader() && !isRunning" @click="startForRoom" class="start-btn">Start</button>
+			<button v-if="amLeader() && !isRunning" @click="startForRoom" class="start-btn">{{ gameFinished ? 'Restart' : 'Start' }}</button>
 		</div>
 		<Game :controlled="true" :room-id="roomId" :username="userStore.username ?? ''" />
 	</div>
@@ -111,5 +120,9 @@ const startForRoom = () => {
 .start-btn:focus-visible {
 	outline: none;
 	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25), 0 0 0 6px rgba(109, 40, 217, 0.5);
+}
+
+.dead {
+	color: red;
 }
 </style>
