@@ -21,9 +21,9 @@ function joinHandler() {
    <div class="page-container">
        <div class="project-title">Red Tetris</div>
        <div class="info-block">
-           <div class="big-label">Username</div>
+           <!-- <div class="big-label">Username</div> -->
            <div class="big-value">{{ userStore.username }}</div>
-           <div class="big-label">Room</div>
+           <!-- <div class="big-label">Room</div> -->
            <div class="big-value">{{ userStore.roomName }}</div>
        </div>
        <div class="input-block">
