@@ -1,13 +1,7 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
   "extends": "./.nuxt/tsconfig.json",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["./*"],
-      "@/*": ["./*"]
-    }
-  },
+  "compilerOptions": {},
   "include": [
     "types/**/*.d.ts",
     "app/types/**/*.d.ts",

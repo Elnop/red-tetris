@@ -94,6 +94,7 @@ const refillQueue = () => {
 }
 
 const startGame = () => {
+	won.value = false
 	isPlaying.value = true
 	isAlive.value = true
 	resetBoard()
@@ -103,6 +104,7 @@ const startGame = () => {
 }
 
 const startGameWithSeed = (seed: number) => {
+	won.value = false
 	isPlaying.value = true
 	isAlive.value = true
 	resetBoard()
