@@ -3,10 +3,13 @@ import { toNodeListener } from "h3"
 import { createServer } from "http"
 import type { NitroApp } from "nitropack"
 
+const PLAYER_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FED766', '#2AB7CA', '#F0B7B3', '#97C1A9']
+
 type User = {
 	username: string
 	alive: boolean
 	socketId: string
+	color: string
 }
 
 type RoomState = {
@@ -99,9 +102,9 @@ export default (nitroApp: NitroApp) => {
 			
 			// mémoriser l'appartenance
 			memberBySocket.set(socket.id, { room, username: clean })
-			
 			if (!state.users.find(u => u.username === clean)) {
-				state.users.push({ username: clean, alive: !state.running, socketId: socket.id })
+				const color = PLAYER_COLORS[state.users.length % PLAYER_COLORS.length]!
+				state.users.push({ username: clean, alive: !state.running, socketId: socket.id, color })
 			}
 			
 			// emit directly to the joining socket to avoid any race
@@ -132,8 +135,8 @@ export default (nitroApp: NitroApp) => {
 		})
 		
 		// Relayer les grilles: payload { room, username, grid }
-		socket.on("tetris-grid", ({ room, username, grid }: { room: string; username: string; grid: string[] }) => {
-			socket.to(room).emit("tetris-ghost", { username, grid })
+		socket.on("tetris-grid", ({ room, username, grid, color }: { room: string; username: string; grid: string[], color: string }) => {
+			socket.to(room).emit("tetris-ghost", { username, grid, color })
 		})
 		
 		// Un joueur a perdu

@@ -8,7 +8,7 @@ export interface ClientToServerEvents {
 	"leave-room": (payload: { room: string; username: string }) => void
 	"send-message": (payload: { room: string; message: string }) => void
 	"tetris-start": (payload: { room: string; seed: number }) => void
-	"tetris-grid": (payload: { room: string; username: string; grid: string[] }) => void
+	"tetris-grid": (payload: { room: string; username: string; grid: string[], color: string }) => void
 	"tetris-game-over": (payload: { room: string; username: string; }) => void
 }
 
@@ -16,13 +16,13 @@ export interface ClientToServerEvents {
  * Tous les events que le SERVER peut envoyer au CLIENT
  */
 export interface ServerToClientEvents {
-	"room-users": (payload: { users: { username: string; alive: boolean }[] }) => void
+	"room-users": (payload: { users: { username: string; alive: boolean, color: string }[] }) => void
 	"room-leader": (payload: { username: string | null }) => void
 	"user-joined": (payload: { username: string }) => void
 	"user-left": (username: string) => void
 	"receive-message": (payload: { username: string; message: string }) => void
 	"tetris-start": (payload: { seed: number }) => void
-	"tetris-ghost": (payload: { username: string; grid: string[] }) => void
+	"tetris-ghost": (payload: { username: string; grid: string[], color: string }) => void
 	"player-lost": (payload: { username: string }) => void
 	"tetris-win": () => void
 	"game-ended": () => void

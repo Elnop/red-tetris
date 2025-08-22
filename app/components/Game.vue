@@ -6,7 +6,7 @@ import type { TypedSocket } from '../types/socket';
 
 const { $socket } = useNuxtApp() as unknown as { $socket: TypedSocket }
 
-const props = defineProps<{ controlled?: boolean; roomId?: string; username?: string }>()
+const props = defineProps<{ controlled?: boolean; roomId?: string; username?: string, playerColor?: string }>()
 
 const COLS = 10
 const ROWS = 20
@@ -18,7 +18,7 @@ Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => null))
 )
 
 // overlay des autres joueurs (une seule pour simplicité; peut être étendu par username)
-const ghostGrids = ref<Record<string, string[]>>({})
+const ghostGrids = ref<Record<string, { grid: string[], color: string }>>({})
 
 // file de pièces et pièce active
 const queue = ref<ActivePiece[]>([])
@@ -62,22 +62,22 @@ const cellStyle = (idx: number) => {
 	// Si le joueur n'est plus en vie, on n'affiche que les fantômes
 	if (!isAlive.value) {
 		for (const key in ghostGrids.value) {
-			const ghost = ghostGrids.value[key]
-			if (ghost && ghost[idx]) {
-				return { background: ghost[idx], borderColor: ghost[idx], opacity: 0.15 }
+			const ghostData = ghostGrids.value[key]
+			if (ghostData && ghostData.grid[idx]) {
+				return { background: ghostData.color, borderColor: ghostData.color, opacity: 0.15 }
 			}
 		}
 		return {}
 	}
-
+	
 	const isActive = activeIndexes.value.has(idx)
 	const color = isActive ? active.value?.color : flatGridColors.value[idx]
 	// overlay fantôme: si pas de couleur locale, voir si un ghost a une couleur
 	if (!color) {
 		for (const key in ghostGrids.value) {
-			const ghost = ghostGrids.value[key]
-			if (ghost && ghost[idx]) {
-				return { background: ghost[idx], borderColor: ghost[idx], opacity: 0.15 }
+			const ghostData = ghostGrids.value[key]
+			if (ghostData && ghostData.grid[idx]) {
+				return { background: ghostData.color, borderColor: ghostData.color, opacity: 0.15 }
 			}
 		}
 	}
@@ -199,7 +199,7 @@ const lockPiece = () => {
 	// envoyer ma grille aux autres si encore en vie
 	if (isAlive.value) {
 		try {
-			$socket.emit('tetris-grid', { room: props.roomId ?? 'default', username: props.username ?? 'me', grid: serializedGrid() })
+			$socket.emit('tetris-grid', { room: props.roomId ?? 'default', username: props.username ?? 'me', grid: serializedGrid(), color: props.playerColor ?? '#888888' })
 		} catch {}
 	}
 	// spawn suivant si encore en vie
@@ -245,9 +245,9 @@ const onKeyDown = (e: KeyboardEvent) => {
 			break
 		}
 		case ' ': // Space
-			e.preventDefault()
-			if (!e.repeat) hardDrop()
-			break
+		e.preventDefault()
+		if (!e.repeat) hardDrop()
+		break
 	}
 }
 
@@ -279,9 +279,9 @@ const onRoomStart = (e: Event) => {
 	if (detail && typeof detail.seed === 'number') startGameWithSeed(detail.seed)
 }
 
-const onGhost = (payload: { username: string; grid: string[] }) => {
+const onGhost = (payload: { username: string; grid: string[], color: string }) => {
 	if (payload.username === (props.username ?? '')) return
-	ghostGrids.value[payload.username] = payload.grid
+	ghostGrids.value[payload.username] = { grid: payload.grid, color: payload.color ?? '#888' }
 }
 
 const onUserLeft = (username: string) => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue"
+import { ref, onMounted, onUnmounted, computed } from "vue"
 import { useRoute } from "vue-router"
 import { useUser } from "../../store/useUser"
 import type { Socket } from "socket.io-client"
@@ -12,10 +12,12 @@ const userStore = useUser()
 const route = useRoute()
 const roomId = route.params.id as string
 
-const users = ref<{ username: string; alive: boolean }[]>([])
+const users = ref<{ username: string; alive: boolean; color: string }[]>([])
 const leader = ref<string | null>(null)
 const isRunning = ref(false)
 const gameFinished = ref(false)
+
+const myColor = computed(() => users.value.find(u => u.username === userStore.username)?.color ?? '#FFFFFF')
 
 onMounted(() => {
 	const username = (userStore.username ?? '').trim()
@@ -25,7 +27,7 @@ onMounted(() => {
 	}
 
 	// Register listeners BEFORE join to avoid missing the first broadcast
-	socket.on("room-users", (data: { users: { username: string; alive: boolean }[] }) => {
+		socket.on("room-users", (data: { users: { username: string; alive: boolean; color: string }[] }) => {
 		users.value = data.users
 		console.log('[room-users] users=%o', data.users)
 	})
@@ -78,12 +80,14 @@ const startForRoom = () => {
 		<NuxtLink to="/">Acceuil</NuxtLink>
 		<h2>Room: {{ roomId }}</h2>
 		<ul>
-			<li v-for="u in users" :key="u.username" :class="{ dead: !u.alive }">{{ u.username }}</li>
+			<li v-for="u in users" :key="u.username" :style="{ color: u.color, textDecoration: u.alive ? 'none' : 'line-through', opacity: u.alive ? 1 : 0.6 }">{{ u.username }}</li>
 		</ul>
 		<div class="actions">
-			<button v-if="amLeader() && !isRunning" @click="startForRoom" class="start-btn">{{ gameFinished ? 'Restart' : 'Start' }}</button>
+						<div class="player-name" :style="{ color: myColor }">
+				<button v-if="amLeader() && !isRunning" @click="startForRoom" class="start-btn">{{ gameFinished ? 'Restart' : 'Start' }}</button>
+			</div>
 		</div>
-		<Game :controlled="true" :room-id="roomId" :username="userStore.username ?? ''" />
+				<Game :controlled="true" :room-id="roomId" :username="userStore.username ?? ''" :player-color="myColor" />
 	</div>
 </template>
 
@@ -122,7 +126,4 @@ const startForRoom = () => {
 	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25), 0 0 0 6px rgba(109, 40, 217, 0.5);
 }
 
-.dead {
-	color: red;
-}
 </style>
