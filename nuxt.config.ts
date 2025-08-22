@@ -2,6 +2,7 @@ import { defineNuxtConfig } from "nuxt/config";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+	srcDir: "app",
 	ssr: false,
 	compatibilityDate: '2025-07-15',
 	devtools: { enabled: true },
@@ -16,5 +17,8 @@ export default defineNuxtConfig({
 			ignore: ["/blog", "/blog/*"]
 		}
 	},
-	modules: ["@pinia/nuxt", 'pinia-plugin-persistedstate/nuxt',]
+	modules: ["@pinia/nuxt", 'pinia-plugin-persistedstate/nuxt',],
+	css: [
+		'@/assets/css/main.css'
+	]
 })
