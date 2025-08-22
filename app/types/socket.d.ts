@@ -1,46 +1,35 @@
-import type { Socket } from "socket.io-client"
+import type { Socket } from 'socket.io-client'
 
-/**
- * Tous les events que le CLIENT peut envoyer au SERVER
- */
-export interface ClientToServerEvents {
-	"join-room": (payload: { room: string; username: string }) => void
-	"leave-room": (payload: { room: string; username: string }) => void
-	"send-message": (payload: { room: string; message: string }) => void
-	"tetris-start": (payload: { room: string; seed: number }) => void
-	"tetris-grid": (payload: { room: string; username: string; grid: string[], color: string }) => void
-	"tetris-game-over": (payload: { room: string; username: string; }) => void
+// Server-to-client events
+interface ServerToClientEvents {
+  'room-leader': (payload: { username: string | null }) => void
+  'room-users': (payload: { users: User[] }) => void
+  'user-left': (username: string) => void
+  'user-joined': (payload: { username: string }) => void
+  'tetris-start': (payload: { seed: number }) => void
+  'tetris-ghost': (payload: { username: string; grid: string[], color: string }) => void
+  'tetris-receive-lines': (payload: { count: number }) => void
+  'player-lost': (payload: { username: string }) => void
+  'tetris-win': () => void
+  'game-ended': () => void
 }
 
-/**
- * Tous les events que le SERVER peut envoyer au CLIENT
- */
-export interface ServerToClientEvents {
-	"room-users": (payload: { users: { username: string; alive: boolean, color: string }[] }) => void
-	"room-leader": (payload: { username: string | null }) => void
-	"user-joined": (payload: { username: string }) => void
-	"user-left": (username: string) => void
-	"receive-message": (payload: { username: string; message: string }) => void
-	"tetris-start": (payload: { seed: number }) => void
-	"tetris-ghost": (payload: { username: string; grid: string[], color: string }) => void
-	"player-lost": (payload: { username: string }) => void
-	"tetris-win": () => void
-	"game-ended": () => void
+// Client-to-server events
+interface ClientToServerEvents {
+  'join-room': (payload: { room: string; username: string }) => void
+  'leave-room': (payload: { room: string; username: string }) => void
+  'tetris-start': (payload: { room: string; seed: number }) => void
+  'tetris-grid': (payload: { room: string; username: string; grid: string[], color: string }) => void
+  'tetris-send-lines': (payload: { room: string; count: number }) => void
+  'tetris-game-over': (payload: { room: string; username: string }) => void
 }
 
-/**
- * Type de socket avec les events typés
- */
+type User = {
+  username: string
+  alive: boolean
+  socketId: string
+  color: string
+}
+
+// The typed socket
 export type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>
-
-declare module "#app" {
-	interface NuxtApp {
-		$socket: import("./socket").TypedSocket
-	}
-}
-
-declare module "vue" {
-	interface ComponentCustomProperties {
-		$socket: import("./socket").TypedSocket
-	}
-}

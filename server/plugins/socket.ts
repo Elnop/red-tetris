@@ -139,6 +139,11 @@ export default (nitroApp: NitroApp) => {
 			socket.to(room).emit("tetris-ghost", { username, grid, color })
 		})
 		
+		// Envoyer des lignes aux autres
+		socket.on('tetris-send-lines', ({ room, count }: { room: string; count: number }) => {
+			socket.to(room).emit('tetris-receive-lines', { count })
+		})
+		
 		// Un joueur a perdu
 		socket.on("tetris-game-over", ({ room, username }) => {
 			const state = rooms[room]

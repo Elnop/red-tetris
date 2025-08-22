@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { type ActivePiece, generateQueue, toCoords, rotateActiveCW, generateQueueFromSeed } from '../../utils/tetris/pieces'
 import { useNuxtApp } from 'nuxt/app'
-import type { TypedSocket } from '../types/socket';
+import type { TypedSocket } from '~/types/socket';
 
 const { $socket } = useNuxtApp() as unknown as { $socket: TypedSocket }
 
@@ -59,6 +59,14 @@ const flatCells = computed(() => grid.value.flat())
 const flatGridColors = computed(() => grid.value.flat())
 
 const cellStyle = (idx: number) => {
+	const isActive = activeIndexes.value.has(idx)
+	const color = isActive ? active.value?.color : flatGridColors.value[idx]
+	
+	// Si la cellule a une couleur (comme les lignes blanches indestructibles), on la priorise
+	if (color === '#FFFFFF') {
+		return { background: '#FFFFFF', borderColor: '#FFFFFF' }
+	}
+	
 	// Si le joueur n'est plus en vie, on n'affiche que les fantômes
 	if (!isAlive.value) {
 		for (const key in ghostGrids.value) {
@@ -70,8 +78,6 @@ const cellStyle = (idx: number) => {
 		return {}
 	}
 	
-	const isActive = activeIndexes.value.has(idx)
-	const color = isActive ? active.value?.color : flatGridColors.value[idx]
 	// overlay fantôme: si pas de couleur locale, voir si un ghost a une couleur
 	if (!color) {
 		for (const key in ghostGrids.value) {
@@ -81,6 +87,7 @@ const cellStyle = (idx: number) => {
 			}
 		}
 	}
+	
 	return color ? { background: color, borderColor: color } : {}
 }
 
@@ -190,7 +197,16 @@ const clearLines = () => {
 		}
 	}
 	while (newRows.length < ROWS) newRows.unshift(Array.from({ length: COLS }, () => null))
-	if (cleared > 0) grid.value = newRows as BoardCell[][]
+	if (cleared > 0) {
+		grid.value = newRows as BoardCell[][]
+		// Envoyer des lignes aux autres si on a fait plus d'une ligne
+		if (cleared > 1) {
+			const linesToSend = cleared - 1
+			try {
+				$socket.emit('tetris-send-lines', { room: props.roomId ?? 'default', count: linesToSend })
+			} catch {}
+		}
+	}
 }
 
 const lockPiece = () => {
@@ -298,6 +314,36 @@ const onWin = () => {
 	active.value = null
 }
 
+const addGarbageLines = (count: number) => {
+	if (!isAlive.value) return
+
+	// Décaler la grille vers le haut
+	for (let y = 0; y < ROWS - count; y++) {
+		grid.value[y] = grid.value[y + count]!
+	}
+
+	// Ajouter les lignes de pénalité en bas
+	for (let y = ROWS - count; y < ROWS; y++) {
+		const newRow: BoardCell[] = Array.from({ length: COLS }, () => '#FFFFFF') // Ligne blanche
+		const holeIndex = Math.floor(Math.random() * COLS)
+		newRow[holeIndex] = null // Trou
+		grid.value[y] = newRow
+	}
+
+	// Si la pièce active est maintenant dans une position invalide, la remonter
+	if (active.value && !canPlace(active.value.matrix, posX.value, posY.value)) {
+		posY.value -= count
+		// Si toujours invalide, game over
+		if (!canPlace(active.value.matrix, posX.value, posY.value)) {
+			active.value = null
+			isAlive.value = false
+			try {
+				$socket.emit('tetris-game-over', { room: props.roomId ?? 'default', username: props.username ?? 'me' })
+			} catch {}
+		}
+	}
+}
+
 onMounted(() => {
 	window.addEventListener('keydown', onKeyDown)
 	window.addEventListener('keyup', onKeyUp)
@@ -306,6 +352,7 @@ onMounted(() => {
 	$socket.on('user-left', onUserLeft)
 	$socket.on('player-lost', onPlayerLost)
 	$socket.on('tetris-win', onWin)
+	$socket.on('tetris-receive-lines', ({ count }) => addGarbageLines(count))
 	rafId = requestAnimationFrame(animate)
 })
 
@@ -318,6 +365,7 @@ onBeforeUnmount(() => {
 	$socket.off('user-left', onUserLeft)
 	$socket.off('player-lost', onPlayerLost)
 	$socket.off('tetris-win', onWin)
+	$socket.off('tetris-receive-lines')
 })
 </script>
 <template>
