@@ -47,9 +47,29 @@ const linesToNextLevel = ref(10) // Lignes restantes pour le prochain niveau
 
 // drop/loop
 const softDrop = ref(false)
-let rafId = 0
+const lastDropTime = ref(0)
+const lastMoveTime = ref(0)
+const lastRotateTime = ref(0)
+const dropInterval = ref(1000) // Intervalle de chute initial (en ms)
+const disappearAnimationId = ref<number>(0) // Pour l'animation de disparition
+let gameLoopInterval: ReturnType<typeof setInterval> | null = null
 const lastTime = ref(0)
 let dropTimer = 0
+let lastFrameTime = 0
+const FPS = 60 // Nombre de mises à jour par seconde
+
+// Boucle de jeu principale utilisant setInterval
+const gameLoop = () => {
+    const now = performance.now()
+    const dt = now - lastFrameTime
+    lastFrameTime = now
+    
+    try {
+        tick(dt)
+    } catch (error) {
+        console.error('Erreur dans la boucle de jeu:', error)
+    }
+}
 
 // Vitesse de chute en millisecondes par niveau (Nintendo NES)
 const LEVEL_SPEEDS = [
@@ -160,14 +180,35 @@ const cellStyle = (idx: number) => {
 // ----------------------- Utils
 const resetBoard = () => {
 	// Réinitialiser la grille
-	for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) grid.value[y]![x] = null
+	grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
 	
 	// Réinitialiser les fantômes
 	ghostGrids.value = {}
 	
 	// Réinitialiser l'état du jeu
 	isAlive.value = true
+	isPlaying.value = false
+	won.value = false
 	disappearOpacity.value = 1
+	posX.value = Math.floor((COLS - 4) / 2)
+	posY.value = 0
+	active.value = null
+	queue.value = []
+	linesCleared.value = 0
+	level.value = 0
+	linesToNextLevel.value = 10
+	gameStartTime.value = 0
+	lastTime.value = 0
+	lastDropTime.value = 0
+	lastMoveTime.value = 0
+	lastRotateTime.value = 0
+	dropInterval.value = 1000
+	
+	// Annimer l'effet de disparition si nécessaire
+	if (disappearAnimationId.value) {
+		cancelAnimationFrame(disappearAnimationId.value)
+		disappearAnimationId.value = 0
+	}
 }
 
 const refillQueue = () => {
@@ -190,11 +231,36 @@ const startGame = () => {
 }
 
 const startGameWithSeed = (seed: number) => {
-	won.value = false
-	isPlaying.value = true
+	// Réinitialiser l'état du jeu
 	resetBoard()
+	
+	// Réinitialiser les compteurs de jeu
+	isPlaying.value = true
+	isAlive.value = true
+	won.value = false
+	gameStartTime.value = Date.now()
+	level.value = 0
+	linesCleared.value = 0
+	linesToNextLevel.value = 10
+	dropInterval.value = 1000
+	dropTimer = 0
+	lastDropTime.value = 0
+	lastMoveTime.value = 0
+	lastRotateTime.value = 0
+	
+	// Réinitialiser la position de la pièce
+	posX.value = Math.floor((COLS - 4) / 2)
+	posY.value = 0
+	
+	// Générer une nouvelle file d'attente et faire apparaître la première pièce
 	queue.value = generateQueueFromSeed(seed, 200)
 	trySpawnNext()
+	
+	// S'assurer que la boucle de jeu est démarrée
+	if (!gameLoopInterval) {
+		lastFrameTime = performance.now()
+		gameLoopInterval = setInterval(gameLoop, 1000 / FPS)
+	}
 }
 
 const canPlace = (matrix: ActivePiece['matrix'], x: number, y: number): boolean => {
@@ -455,13 +521,6 @@ const tick = (dtMs: number) => {
 	}
 }
 
-const animate = (t: number) => {
-	const dt = lastTime.value ? t - lastTime.value : 0
-	lastTime.value = t
-	tick(dt)
-	rafId = requestAnimationFrame(animate)
-}
-
 const onRoomStart = (e: Event) => {
 	const detail = (e as CustomEvent<{ seed: number }>).detail
 	if (detail && typeof detail.seed === 'number') startGameWithSeed(detail.seed)
@@ -596,8 +655,7 @@ const addGarbageLines = (count: number) => {
 // Configuration des écouteurs d'événements
 const setupEventListeners = () => {
 	// Les événements sont déjà gérés par défaut par le serveur
-	// On utilise les événements standards définis dans les types
-	rafId = requestAnimationFrame(animate)
+	// La boucle de jeu est maintenant gérée par setInterval dans onMounted
 }
 
 // Nettoyage des écouteurs d'événements
@@ -614,11 +672,24 @@ onMounted(() => {
 	$socket.on('player-lost', onPlayerLost)
 	$socket.on('tetris-win', onWin)
 	$socket.on('tetris-receive-lines', ({ count }) => addGarbageLines(count))
+	
+	// S'assurer que la boucle de jeu est démarrée
+	if (!gameLoopInterval) {
+		lastFrameTime = performance.now()
+		gameLoopInterval = setInterval(gameLoop, 1000 / FPS)
+	}
+	
 	setupEventListeners()
 })
 
 onBeforeUnmount(() => {
-	cancelAnimationFrame(rafId)
+	// Arrêter la boucle de jeu
+	if (gameLoopInterval) {
+		clearInterval(gameLoopInterval)
+		gameLoopInterval = null
+	}
+	
+	// Nettoyer les écouteurs d'événements
 	window.removeEventListener('keydown', onKeyDown)
 	window.removeEventListener('keyup', onKeyUp)
 	window.removeEventListener('tetris-start', onRoomStart as EventListener)
