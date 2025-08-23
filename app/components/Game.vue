@@ -32,14 +32,27 @@ const posY = ref(0)
 const isPlaying = ref(false) // partie affichée/démarrée
 const isAlive = ref(false)   // joueur encore en vie (peut recevoir des pièces)
 const won = ref(false)       // le joueur a gagné
+const gameStartTime = ref(0)  // Timestamp du début de la partie
+const level = ref(0)         // Niveau actuel (commence à 0, premier niveau = 1)
+const linesCleared = ref(0)   // Nombre total de lignes effacées
+const linesToNextLevel = ref(10) // Lignes restantes pour le prochain niveau
 
 // drop/loop
 const softDrop = ref(false)
 let rafId = 0
 const lastTime = ref(0)
 let dropTimer = 0
-const BASE_DROP_MS = 800
-const SOFT_DROP_MS = 100
+
+// Vitesse de chute en millisecondes par niveau (Nintendo NES)
+const LEVEL_SPEEDS = [
+    1000, 793, 618, 473, 355, 262, 190, 135, 94, 64, 
+    43, 28, 18, 11, 7, 5, 5, 5, 4, 4,  // Niveaux 0-19
+    3, 3, 3, 2, 2, 2, 2, 2, 2, 2,      // Niveaux 20-29
+    1                                   // Niveau 30+
+]
+
+// Vitesse de chute en mode soft drop (1 cellule par frame, ~16.67ms à 60fps)
+const SOFT_DROP_MS = 16.67
 
 const activeIndexes = computed(() => {
 	const indices = new Set<number>()
@@ -101,12 +114,17 @@ const refillQueue = () => {
 }
 
 const startGame = () => {
-	won.value = false
+	resetBoard()
+	queue.value = generateQueue(14)
 	isPlaying.value = true
 	isAlive.value = true
-	resetBoard()
-	queue.value = []
-	queue.value.push(...generateQueue(12))
+	won.value = false
+	gameStartTime.value = Date.now()
+	level.value = 0
+	linesCleared.value = 0
+	linesToNextLevel.value = 10
+	posX.value = Math.floor((COLS - 4) / 2)
+	posY.value = 0
 	trySpawnNext()
 }
 
@@ -186,25 +204,50 @@ const serializedGrid = (): string[] => {
 }
 
 const clearLines = () => {
-	const newRows: BoardCell[][] = []
-	let cleared = 0
-	for (let y = 0; y < ROWS; y++) {
-		const full = grid.value[y]!.every(c => c !== null)
-		if (full) {
-			cleared++
-		} else {
-			newRows.push(grid.value[y]!)
+	let linesRemoved = 0
+
+	for (let y = ROWS - 1; y >= 0; y--) {
+		// Vérifier si la ligne est pleine
+		const isLineFull = grid.value[y]!.every(cell => cell !== null)
+
+		if (isLineFull) {
+			// Supprimer la ligne
+			grid.value.splice(y, 1)
+			// Ajouter une nouvelle ligne vide en haut
+			grid.value.unshift(Array(COLS).fill(null))
+			linesRemoved++
+			y++ // Vérifier à nouveau la même position
 		}
 	}
-	while (newRows.length < ROWS) newRows.unshift(Array.from({ length: COLS }, () => null))
-	if (cleared > 0) {
-		grid.value = newRows as BoardCell[][]
-		// Envoyer des lignes aux autres si on a fait plus d'une ligne
-		if (cleared > 1) {
-			const linesToSend = cleared - 1
-			try {
-				$socket.emit('tetris-send-lines', { room: props.roomId ?? 'default', count: linesToSend })
-			} catch {}
+
+	// Si des lignes ont été supprimées, mettre à jour le niveau
+	if (linesRemoved > 0) {
+		linesCleared.value += linesRemoved
+		
+		// Mettre à jour le niveau tous les 10 lignes
+		const newLevel = Math.floor(linesCleared.value / 10)
+		if (newLevel > level.value) {
+			level.value = newLevel
+			linesToNextLevel.value = 10 - (linesCleared.value % 10)
+		} else {
+			linesToNextLevel.value -= linesRemoved
+		}
+
+		// Envoyer la grille aux autres joueurs
+		if (props.roomId && props.username) {
+			$socket.emit('tetris-grid', { 
+				room: props.roomId, 
+				grid: serializedGrid(),
+				color: props.playerColor || '#FFFFFF'
+			})
+			
+			// Émettre un événement séparé pour les lignes complétées
+			if (linesRemoved > 0) {
+				$socket.emit('tetris-lines-cleared', { 
+					room: props.roomId,
+					count: linesRemoved
+				} as any)
+			}
 		}
 	}
 }
@@ -213,10 +256,16 @@ const lockPiece = () => {
 	mergeActiveToGrid()
 	clearLines()
 	// envoyer ma grille aux autres si encore en vie
-	if (isAlive.value) {
+	if (isAlive.value && props.roomId) {
 		try {
-			$socket.emit('tetris-grid', { room: props.roomId ?? 'default', username: props.username ?? 'me', grid: serializedGrid(), color: props.playerColor ?? '#888888' })
-		} catch {}
+			$socket.emit('tetris-grid', { 
+				room: props.roomId, 
+				grid: serializedGrid(), 
+				color: props.playerColor ?? '#888888' 
+			})
+		} catch (e) {
+			console.error('Error sending grid update:', e)
+		}
 	}
 	// spawn suivant si encore en vie
 	if (isAlive.value) trySpawnNext()
@@ -242,6 +291,9 @@ const onKeyDown = (e: KeyboardEvent) => {
 		break
 		case 'ArrowDown':
 		e.preventDefault()
+		if (!softDrop.value) {
+			dropTimer = 0 // Réinitialiser le timer quand on commence le soft drop
+		}
 		softDrop.value = true
 		break
 		case 'ArrowUp': {
@@ -272,14 +324,46 @@ const onKeyUp = (e: KeyboardEvent) => {
 }
 
 // ----------------------- Loop
+const getCurrentBaseDropSpeed = () => {
+	if (!isPlaying.value) return 1000 // Valeur par défaut
+	
+	// Utiliser la table de vitesse officielle de Tetris NES
+	// Pour les niveaux au-delà de 29, on utilise la même vitesse que le niveau 29
+	const effectiveLevel = Math.min(level.value, 29)
+	return LEVEL_SPEEDS[effectiveLevel] || LEVEL_SPEEDS[LEVEL_SPEEDS.length - 1]
+}
+
 const tick = (dtMs: number) => {
 	if (!isPlaying.value) return
 	if (!isAlive.value || !active.value) return
-	const interval = softDrop.value ? SOFT_DROP_MS : BASE_DROP_MS
+	
+	// Obtenir la vitesse de chute de base actuelle (qui s'accélère avec le temps)
+	const currentBaseDropMs = getCurrentBaseDropSpeed()
+	
+	// Appliquer une accélération supplémentaire en mode soft drop
+	const currentSpeed = softDrop.value ? SOFT_DROP_MS : currentBaseDropMs
+	// On s'assure que currentSpeed est toujours défini
+	if (currentSpeed === undefined) {
+		console.warn('currentSpeed is undefined, using fallback value')
+		return
+	}
+
+	// Log de débogage
+	if (Math.random() < 0.01) { // N'afficher que 1% du temps pour éviter la surcharge
+		console.log('Vitesse actuelle:', {
+			dropTimer,
+			currentSpeed: currentBaseDropMs, // Utilisation directe de currentBaseDropMs
+			level: level.value,
+			dtMs
+		})
+	}
+
 	dropTimer += dtMs
-	while (dropTimer >= interval) {
-		dropTimer -= interval
-		if (!tryMove(0, 1)) lockPiece()
+	if (dropTimer >= currentSpeed) {
+		dropTimer = 0
+		if (!tryMove(0, 1)) {
+			lockPiece()
+		}
 	}
 }
 
@@ -322,12 +406,10 @@ const addGarbageLines = (count: number) => {
 		grid.value[y] = grid.value[y + count]!
 	}
 
-	// Ajouter les lignes de pénalité en bas
+	// Ajouter les lignes de pénalité en bas (lignes blanches indestructibles)
 	for (let y = ROWS - count; y < ROWS; y++) {
-		const newRow: BoardCell[] = Array.from({ length: COLS }, () => '#FFFFFF') // Ligne blanche
-		const holeIndex = Math.floor(Math.random() * COLS)
-		newRow[holeIndex] = null // Trou
-		grid.value[y] = newRow
+		// Créer une ligne complètement blanche sans trou
+		grid.value[y] = Array(COLS).fill('#FFFFFF')
 	}
 
 	// Si la pièce active est maintenant dans une position invalide, la remonter
@@ -344,6 +426,18 @@ const addGarbageLines = (count: number) => {
 	}
 }
 
+// Configuration des écouteurs d'événements
+const setupEventListeners = () => {
+	// Les événements sont déjà gérés par défaut par le serveur
+	// On utilise les événements standards définis dans les types
+	rafId = requestAnimationFrame(animate)
+}
+
+// Nettoyage des écouteurs d'événements
+const cleanupEventListeners = () => {
+	// Les événements sont automatiquement nettoyés par le composant
+}
+
 onMounted(() => {
 	window.addEventListener('keydown', onKeyDown)
 	window.addEventListener('keyup', onKeyUp)
@@ -353,7 +447,7 @@ onMounted(() => {
 	$socket.on('player-lost', onPlayerLost)
 	$socket.on('tetris-win', onWin)
 	$socket.on('tetris-receive-lines', ({ count }) => addGarbageLines(count))
-	rafId = requestAnimationFrame(animate)
+	setupEventListeners()
 })
 
 onBeforeUnmount(() => {
@@ -366,6 +460,7 @@ onBeforeUnmount(() => {
 	$socket.off('player-lost', onPlayerLost)
 	$socket.off('tetris-win', onWin)
 	$socket.off('tetris-receive-lines')
+	cleanupEventListeners()
 })
 </script>
 <template>
