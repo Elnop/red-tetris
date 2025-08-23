@@ -18,7 +18,13 @@ Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => null))
 )
 
 // overlay des autres joueurs (une seule pour simplicité; peut être étendu par username)
-const ghostGrids = ref<Record<string, { grid: string[], color: string }>>({})
+interface GhostData {
+	grid: string[];
+	color: string;
+	timestamp: number;
+}
+
+const ghostGrids = ref<Record<string, GhostData>>({})
 
 // file de pièces et pièce active
 const queue = ref<ActivePiece[]>([])
@@ -32,6 +38,8 @@ const posY = ref(0)
 const isPlaying = ref(false) // partie affichée/démarrée
 const isAlive = ref(false)   // joueur encore en vie (peut recevoir des pièces)
 const won = ref(false)       // le joueur a gagné
+const disappearOpacity = ref(1) // For the disappearing animation
+const animationFrameId = ref<number>() // To track the animation frame
 const gameStartTime = ref(0)  // Timestamp du début de la partie
 const level = ref(0)         // Niveau actuel (commence à 0, premier niveau = 1)
 const linesCleared = ref(0)   // Nombre total de lignes effacées
@@ -72,41 +80,94 @@ const flatCells = computed(() => grid.value.flat())
 const flatGridColors = computed(() => grid.value.flat())
 
 const cellStyle = (idx: number) => {
-	const isActive = activeIndexes.value.has(idx)
-	const color = isActive ? active.value?.color : flatGridColors.value[idx]
+	// Calculer les coordonnées x, y à partir de l'index
+	const x = idx % COLS
+	const y = Math.floor(idx / COLS)
 	
-	// Si la cellule a une couleur (comme les lignes blanches indestructibles), on la priorise
-	if (color === '#FFFFFF') {
+	// Vérifier d'abord la grille principale (pour les lignes blanches indestructibles)
+	const cellValue = grid.value[y]?.[x]
+	if (cellValue === '#FFFFFF') {
 		return { background: '#FFFFFF', borderColor: '#FFFFFF' }
 	}
 	
-	// Si le joueur n'est plus en vie, on n'affiche que les fantômes
-	if (!isAlive.value) {
-		for (const key in ghostGrids.value) {
-			const ghostData = ghostGrids.value[key]
-			if (ghostData && ghostData.grid[idx]) {
-				return { background: ghostData.color, borderColor: ghostData.color, opacity: 0.15 }
-			}
-		}
-		return {}
-	}
-	
-	// overlay fantôme: si pas de couleur locale, voir si un ghost a une couleur
-	if (!color) {
-		for (const key in ghostGrids.value) {
-			const ghostData = ghostGrids.value[key]
-			if (ghostData && ghostData.grid[idx]) {
-				return { background: ghostData.color, borderColor: ghostData.color, opacity: 0.15 }
-			}
+	// Ensuite, vérifier si la cellule est occupée par la pièce active
+	if (activeIndexes.value.has(idx) && active.value?.color) {
+		return { 
+			background: active.value.color, 
+			borderColor: active.value.color 
 		}
 	}
 	
-	return color ? { background: color, borderColor: color } : {}
+	// Si la cellule a une couleur dans la grille (autre que blanc)
+	if (cellValue) {
+		return { background: cellValue, borderColor: cellValue }
+	}
+	
+	// Vérifier les fantômes (pour tous les joueurs, qu'ils soient en vie ou non)
+	const ghosts = Object.values(ghostGrids.value).filter(Boolean) as GhostData[]
+	if (ghosts.length === 0) return {}
+
+	// Trier les fantômes par ordre d'arrivée (le plus ancien en premier)
+	const sortedGhosts = [...ghosts].sort((a, b) => a.timestamp - b.timestamp)
+
+	// Vérifier si la cellule est occupée par un ou plusieurs fantômes
+	const activeGhosts = sortedGhosts.filter(ghost => {
+		// Vérifier si la cellule est occupée par ce fantôme
+		const gridValue = ghost?.grid?.[idx]
+		if (gridValue === undefined || gridValue === null) return false
+		// La cellule est occupée si elle contient '1' (bloc normal) ou 'W' (ligne blanche indestructible)
+		const strValue = String(gridValue).trim()
+		return strValue === '1' || strValue === 'W'
+	}).filter(Boolean) // Filtrer les valeurs nulles/undefined
+
+	if (activeGhosts.length === 0) return {}
+
+	// Style de base pour tous les fantômes
+	const baseStyle = {
+		opacity: isAlive.value ? 0.1 : 0.4,
+		zIndex: 1
+	}
+
+	// Si un seul fantôme, utiliser sa couleur directement
+	if (activeGhosts.length === 1) {
+		const ghost = activeGhosts[0]
+		const ghostColor = ghost?.color || '#888888'
+		return {
+			...baseStyle,
+			background: ghostColor,
+			borderColor: ghostColor
+		}
+	}
+
+	// Pour plusieurs fantômes, créer un dégradé avec toutes les couleurs
+	const gradientStops = activeGhosts
+		.map((ghost, i, arr) => {
+			const color = ghost?.color || '#888888'
+			const pos = (i / arr.length) * 100
+			const nextPos = ((i + 1) / arr.length) * 100
+			return `${color} ${pos}%, ${color} ${nextPos}%`
+		})
+		.join(',')
+
+	const lastGhostColor = activeGhosts[activeGhosts.length - 1]?.color || '#888888'
+	return {
+		...baseStyle,
+		background: `linear-gradient(135deg, ${gradientStops})`,
+		borderColor: lastGhostColor
+	}
 }
 
 // ----------------------- Utils
 const resetBoard = () => {
+	// Réinitialiser la grille
 	for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) grid.value[y]![x] = null
+	
+	// Réinitialiser les fantômes
+	ghostGrids.value = {}
+	
+	// Réinitialiser l'état du jeu
+	isAlive.value = true
+	disappearOpacity.value = 1
 }
 
 const refillQueue = () => {
@@ -131,7 +192,6 @@ const startGame = () => {
 const startGameWithSeed = (seed: number) => {
 	won.value = false
 	isPlaying.value = true
-	isAlive.value = true
 	resetBoard()
 	queue.value = generateQueueFromSeed(seed, 200)
 	trySpawnNext()
@@ -197,8 +257,15 @@ const serializedGrid = (): string[] => {
 	const out: string[] = []
 	const flat = grid.value.flat()
 	for (let i = 0; i < flat.length; i++) {
-		const c = flat[i]
-		out.push(c ?? '')
+		// '1' pour les cellules occupées normales, 'W' pour les lignes blanches, '0' pour vide
+		const cell = flat[i]
+		if (cell === '#FFFFFF') {
+			out.push('W') // Ligne blanche indestructible
+		} else if (cell) {
+			out.push('1') // Bloc normal
+		} else {
+			out.push('0') // Case vide
+		}
 	}
 	return out
 }
@@ -207,10 +274,11 @@ const clearLines = () => {
 	let linesRemoved = 0
 
 	for (let y = ROWS - 1; y >= 0; y--) {
-		// Vérifier si la ligne est pleine
-		const isLineFull = grid.value[y]!.every(cell => cell !== null)
+		// Vérifier si la ligne est pleine et n'est pas une ligne blanche indestructible
+		const isLineFull = grid.value[y]!.every(cell => cell !== null && cell !== '#FFFFFF')
+		const isWhiteLine = grid.value[y]!.every(cell => cell === '#FFFFFF')
 
-		if (isLineFull) {
+		if (isLineFull && !isWhiteLine) {
 			// Supprimer la ligne
 			grid.value.splice(y, 1)
 			// Ajouter une nouvelle ligne vide en haut
@@ -235,18 +303,28 @@ const clearLines = () => {
 
 		// Envoyer la grille aux autres joueurs
 		if (props.roomId && props.username) {
-			$socket.emit('tetris-grid', { 
-				room: props.roomId, 
-				grid: serializedGrid(),
+			const gridData = serializedGrid()
+			const occupiedCells = gridData.filter(cell => cell === '1').length
+			console.log('📤 Sending grid update (piece locked):', {
+				room: props.roomId,
+				gridSize: gridData.length,
+				occupiedCells,
+				sample: gridData.slice(0, 20).join(''),
 				color: props.playerColor || '#FFFFFF'
 			})
+			$socket.emit('tetris-grid', { 
+				room: props.roomId, 
+				grid: gridData,
+				color: props.playerColor || '#FFFFFF',
+				username: props.username
+			} as any) // Using type assertion to avoid TypeScript errors
 			
 			// Émettre un événement séparé pour les lignes complétées
 			if (linesRemoved > 0) {
-				$socket.emit('tetris-lines-cleared', { 
+				$socket.emit('tetris-send-lines', { 
 					room: props.roomId,
-					count: linesRemoved
-				} as any)
+					count: linesRemoved - 1 // Envoyer le nombre de lignes à ajouter (nombre de lignes complétées - 1)
+			} as any)
 			}
 		}
 	}
@@ -258,11 +336,21 @@ const lockPiece = () => {
 	// envoyer ma grille aux autres si encore en vie
 	if (isAlive.value && props.roomId) {
 		try {
+			const gridData = serializedGrid()
+			const occupiedCells = gridData.filter(cell => cell === '1').length
+			console.log('📤 Sending grid update (periodic):', {
+				room: props.roomId,
+				gridSize: gridData.length,
+				occupiedCells,
+				sample: gridData.slice(0, 20).join(''),
+				color: props.playerColor ?? '#888888'
+			})
 			$socket.emit('tetris-grid', { 
 				room: props.roomId, 
-				grid: serializedGrid(), 
-				color: props.playerColor ?? '#888888' 
-			})
+				grid: gridData, 
+				color: props.playerColor ?? '#888888',
+				username: props.username
+			} as any) // Using type assertion to avoid TypeScript errors
 		} catch (e) {
 			console.error('Error sending grid update:', e)
 		}
@@ -379,9 +467,61 @@ const onRoomStart = (e: Event) => {
 	if (detail && typeof detail.seed === 'number') startGameWithSeed(detail.seed)
 }
 
-const onGhost = (payload: { username: string; grid: string[], color: string }) => {
+interface GhostData {
+	grid: string[];
+	color: string;
+	timestamp: number;
+}
+
+const onGhost = (payload: { username: string; grid: string[]; color: string }) => {
+	// Skip our own ghost data
 	if (payload.username === (props.username ?? '')) return
-	ghostGrids.value[payload.username] = { grid: payload.grid, color: payload.color ?? '#888' }
+	
+	// Log received ghost data
+	const occupiedCells = payload.grid?.filter(cell => String(cell).trim() === '1').length || 0
+	const whiteCells = payload.grid?.filter(cell => String(cell).trim() === 'W').length || 0
+	console.log('📥 Received ghost data from:', payload.username, {
+		gridSize: payload.grid?.length,
+		occupiedCells,
+		whiteCells,
+		color: payload.color,
+		sample: payload.grid?.slice(0, 10).join('') // Augmenté à 10 pour mieux voir les motifs
+	})
+
+	const ghostData = { 
+		grid: payload.grid, 
+		color: payload.color ?? '#888',
+		timestamp: Date.now()
+	}
+	
+	// Store the ghost data
+	ghostGrids.value = {
+		...ghostGrids.value,
+		[payload.username]: ghostData
+	}
+	
+	// Log current ghost state
+	console.log('👻 Active ghosts:', Object.keys(ghostGrids.value).length)
+	Object.entries(ghostGrids.value).forEach(([user, data]) => {
+		const cells = (data as GhostData).grid?.filter(cell => String(cell).trim() === '1').length || 0
+		const whiteCells = (data as GhostData).grid?.filter(cell => String(cell).trim() === 'W').length || 0
+		console.log(`  - ${user}: ${cells} cells, ${whiteCells} white cells, color: ${(data as GhostData).color}`)
+		
+		// Afficher un aperçu de la grille du fantôme
+		if (data.grid) {
+			const gridPreview = []
+			for (let y = 0; y < 4; y++) { // Afficher les 4 premières lignes
+				const row = []
+				for (let x = 0; x < 10; x++) {
+					const idx = y * COLS + x
+					const cell = data.grid[idx] || '0'
+					row.push(cell === '1' ? '█' : cell === 'W' ? 'W' : '.')
+				}
+				gridPreview.push(row.join(''))
+			}
+			console.log('    ' + gridPreview.join('\n    '))
+		}
+	})
 }
 
 const onUserLeft = (username: string) => {
@@ -389,7 +529,34 @@ const onUserLeft = (username: string) => {
 }
 
 const onPlayerLost = ({ username }: { username: string }) => {
-	if (username) onUserLeft(username)
+	if (username === props.username) {
+		// If it's the current player, trigger the disappearing animation
+		isAlive.value = false
+		
+		// Animate the grid cells disappearing
+		const fadeOutDuration = 1500 // 1.5 seconds
+		const startTime = Date.now()
+		
+		const animateDisappear = () => {
+			const elapsed = Date.now() - startTime
+			const progress = Math.min(elapsed / fadeOutDuration, 1)
+			
+			// Update the opacity based on progress
+			disappearOpacity.value = 1 - progress
+			
+			if (progress < 1) {
+				animationFrameId.value = requestAnimationFrame(animateDisappear)
+			} else {
+				// Clear the grid after animation completes
+				grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
+				disappearOpacity.value = 0
+			}
+		}
+		
+		animateDisappear()
+	} else {
+		onUserLeft(username)
+	}
 }
 
 const onWin = () => {

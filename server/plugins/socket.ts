@@ -136,7 +136,26 @@ export default (nitroApp: NitroApp) => {
 		
 		// Relayer les grilles: payload { room, username, grid }
 		socket.on("tetris-grid", ({ room, username, grid, color }: { room: string; username: string; grid: string[], color: string }) => {
-			socket.to(room).emit("tetris-ghost", { username, grid, color })
+			if (!room || !username || !grid || !Array.isArray(grid)) {
+				console.error('Invalid grid data received:', { room, username, gridLength: grid?.length, color })
+				return
+			}
+
+			// Log the grid update
+			const occupiedCells = grid.filter(cell => String(cell).trim() === '1').length
+			console.log(`📡 Relaying grid from ${username} to room ${room}:`, {
+				gridSize: grid.length,
+				occupiedCells,
+				sample: grid.slice(0, 20).join(''),
+				color
+			})
+
+			// Broadcast to other players in the room
+			socket.to(room).emit("tetris-ghost", { 
+				username, 
+				grid,
+				color: color || '#888888' // Default color if not provided
+			})
 		})
 		
 		// Envoyer des lignes aux autres
