@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { type ActivePiece, generateQueue, toCoords, rotateActiveCW, generateQueueFromSeed } from '../../utils/tetris/pieces'
+import { type ActivePiece, generateQueue, toCoords, rotateActiveCW, generateQueueFromSeed } from '~/utils/tetris/pieces'
 import { useNuxtApp } from 'nuxt/app'
 import type { TypedSocket } from '~/types/socket';
 
