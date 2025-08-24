@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from '#app';
-import { useUser } from '~/store/useUser';
+import { useUserStore } from '~/stores/useUserStore';
 
-const userStore = useUser()
+const userStore = useUserStore()
 
 const router = useRouter()
 

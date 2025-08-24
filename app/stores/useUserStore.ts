@@ -22,7 +22,7 @@ function generateUsername() {
 	return `${prefix}${middle}${suffix}`;
 }
 
-export const useUser = defineStore('user', () => {
+export const useUserStore = defineStore('user', () => {
 	const username = ref<string | null>(null)
 	const roomName = ref<string>("")
 	const genUsername = () => {

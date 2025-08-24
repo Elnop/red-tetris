@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue"
 import { useRoute } from "vue-router"
-import { useUser } from "../../store/useUser"
+import { useUserStore } from "../../stores/useUserStore"
 import type { Socket } from "socket.io-client"
 import { useNuxtApp } from "nuxt/app"
 
 const { $socket } = useNuxtApp()
 const socket = $socket as Socket
 
-const userStore = useUser()
+const userStore = useUserStore()
 const route = useRoute()
 const roomId = route.params.id as string
 
