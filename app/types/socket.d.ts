@@ -29,14 +29,15 @@ interface ClientToServerEvents {
   'tetris-ghost': (data: { room: string; grid: string[]; color: string }) => void
   'tetris-send-lines': (data: { room: string; count: number }) => void
   'tetris-game-over': (data: { room: string; username: string }) => void
+  'tetris-start': (data: { room: string; seed: number }) => void
 }
 
 type User = {
-  username: string
-  alive: boolean
-  socketId: string
-  color: string
-}
+  username: string;
+  alive: boolean;
+  socketId: string;
+  color: string;
+};
 
 // The typed socket
 export type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>

@@ -25,11 +25,15 @@ function generateUsername() {
 export const useUserStore = defineStore('user', () => {
 	const username = ref<string | null>(null)
 	const roomName = ref<string>("")
+	const playerColor = ref<string>("#FFFFFF")
 	const genUsername = () => {
 		username.value = generateUsername()
 	}
+	function setColor(color: string) {
+		playerColor.value = color
+	}
 	if (!username.value) genUsername()
-	return { username, genUsername, roomName }
+	return { username, genUsername, roomName, playerColor, setColor }
 }, {
 	// @ts-ignore
 	persist: {
