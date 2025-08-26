@@ -1,15 +1,35 @@
 import type { GhostData } from "~/types/game"
 import { useGameStore } from "~/stores/useGameStore"
 import { useUserStore } from "~/stores/useUserStore"
+import { storeToRefs } from "pinia"
 
 export function useGhosts() {
 	const gameStore = useGameStore()
-	const { ghostGrids, isAlive, updateGhostGrids } = gameStore
-	
+	const { updateGhostGrids } = gameStore
+	const { ghostGrids, isAlive } = storeToRefs(gameStore)
 	const userStore = useUserStore()
 
+	const createMultiGhostStyle = (ghosts: GhostData[], baseStyle: any) => {
+		const gradientStops = ghosts
+		.map((ghost, i, arr) => {
+			console.log(ghost?.color)
+			const color = ghost?.color || '#888888'
+			const pos = (i / arr.length) * 100
+			const nextPos = ((i + 1) / arr.length) * 100
+			return `${color} ${pos}%, ${color} ${nextPos}%`
+		})
+		.join(',')
+		
+		const lastGhostColor = ghosts[ghosts.length - 1]?.color || '#888888'
+		return {
+			...baseStyle,
+			background: `linear-gradient(135deg, ${gradientStops})`,
+			borderColor: lastGhostColor
+		}
+	}
+
 	const getGhostStyle = (idx: number) => {
-		const ghosts = Object.values(ghostGrids).filter(Boolean) as GhostData[]
+		const ghosts = Object.values(ghostGrids.value).filter(Boolean) as GhostData[]
 		if (ghosts.length === 0) return null
 		
 		const sortedGhosts = [...ghosts].sort((a, b) => a.timestamp - b.timestamp)
@@ -24,7 +44,7 @@ export function useGhosts() {
 		if (activeGhosts.length === 0) return null
 		
 		const baseStyle = {
-			opacity: isAlive ? 0.1 : 0.4,
+			opacity: isAlive.value ? 0.1 : 0.4,
 			zIndex: 1
 		}
 		
@@ -36,25 +56,8 @@ export function useGhosts() {
 				borderColor: ghostColor
 			}
 		}
-		
-		const createMultiGhostStyle = (ghosts: GhostData[], baseStyle: any) => {
-			const gradientStops = ghosts
-			.map((ghost, i, arr) => {
-				const color = ghost?.color || '#888888'
-				const pos = (i / arr.length) * 100
-				const nextPos = ((i + 1) / arr.length) * 100
-				return `${color} ${pos}%, ${color} ${nextPos}%`
-			})
-			.join(',')
-			
-			const lastGhostColor = ghosts[ghosts.length - 1]?.color || '#888888'
-			return {
-				...baseStyle,
-				background: `linear-gradient(135deg, ${gradientStops})`,
-				borderColor: lastGhostColor
-			}
-		}
 
+		return createMultiGhostStyle(activeGhosts, baseStyle)
 		
 	}	
 	const onGhost = (payload: { username: string; grid: string[]; color: string }): void => {

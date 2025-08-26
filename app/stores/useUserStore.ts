@@ -1,5 +1,6 @@
-import { defineStore } from 'pinia';
+import { defineStore, storeToRefs } from 'pinia';
 import { ref } from 'vue';
+import { useRoomStore } from './useRoomStore';
 
 
 function generateUsername() {
@@ -25,15 +26,16 @@ function generateUsername() {
 export const useUserStore = defineStore('user', () => {
 	const username = ref<string | null>(null)
 	const roomName = ref<string>("")
-	const playerColor = ref<string>("#FFFFFF")
+	const userColor = ref<string>("#FFFFFF")
 	const genUsername = () => {
 		username.value = generateUsername()
 	}
-	function setColor(color: string) {
-		playerColor.value = color
+	const setColor = (color: string) => {
+		userColor.value = color
 	}
-	if (!username.value) genUsername()
-	return { username, genUsername, roomName, playerColor, setColor }
+	if (!username.value)
+		genUsername()
+	return { username, genUsername, roomName, userColor, setColor }
 }, {
 	// @ts-ignore
 	persist: {

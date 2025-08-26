@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { storeToRefs } from 'pinia';
 import { useBoard } from '~/composables/useBoard';
 import { useGame } from '~/composables/useGame';
 import { useGameStore } from '~/stores/useGameStore';
@@ -12,7 +13,6 @@ const gameStore = useGameStore()
 
 
 const { COLS, ROWS } = gameStore
-
 const game = useGame()
 const { start, cellStyle } = game
 

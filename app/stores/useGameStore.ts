@@ -1,5 +1,5 @@
 import { defineStore } from "pinia"
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import type { BoardCell, GhostData } from "~/types/game"
 import { generateQueue, generateQueueFromSeed, toCoords, type ActivePiece } from "~/utils/pieces"
 import { useUserStore } from "./useUserStore"
@@ -39,6 +39,11 @@ export const useGameStore = defineStore('game', () => {
 	let lastFrameTime = 0
 	
 	const userStore = useUserStore()
+
+	const flatCells = computed(() => { 
+		return grid.value.flat()
+	})
+	// const flatGridColors = computed(() => grid.flat())
 
 	// ========== SETTERS
 
@@ -257,5 +262,6 @@ export const useGameStore = defineStore('game', () => {
 		refillQueue,
 		setIsPlaying,
 		initQueue,
+		flatCells
 	}
 })

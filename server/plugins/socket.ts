@@ -39,7 +39,6 @@ export default (nitroApp: NitroApp) => {
 		if (typeof u !== 'string') return null
 		const v = u.trim()
 		if (!v) return null
-		console.log('[sanitizeUsername] v=%s', v)
 		return v
 	}
 	
@@ -63,12 +62,10 @@ export default (nitroApp: NitroApp) => {
 	}
 	
 	const broadcastUsers = (room: string) => {
-		console.log('[room name]', room)
 		cleanRoom(room)
 		const state = rooms[room]
 		if (!state) return
 		io.to(room).emit("room-users", { users: state.users })
-		console.log('[broadcastUsers] users=%o', state.users)
 		emitLeader(room)
 	}
 	
@@ -85,12 +82,8 @@ export default (nitroApp: NitroApp) => {
 		if (state.users.length === 0) delete rooms[room]
 	}
 	
-	io.on("connection", (socket) => {
-		console.log("🔌 Client connected")
-		
+	io.on("connection", (socket) => {		
 		socket.on("join-room", ({ room, username }) => {
-			console.log('[join-room] room=%s username=%o socket=%s', room, username, socket.id)
-			
 			// IMPORTANT: join the Socket.IO room
 			socket.join(room)
 			
@@ -140,16 +133,6 @@ export default (nitroApp: NitroApp) => {
 				console.error('Invalid grid data received:', { room, username, gridLength: grid?.length, color })
 				return
 			}
-
-			// Log the grid update
-			const occupiedCells = grid.filter(cell => String(cell).trim() === '1').length
-			console.log(`📡 Relaying grid from ${username} to room ${room}:`, {
-				gridSize: grid.length,
-				occupiedCells,
-				sample: grid.slice(0, 20).join(''),
-				color
-			})
-
 			// Broadcast to other players in the room
 			socket.to(room).emit("tetris-ghost", { 
 				username, 
@@ -194,7 +177,6 @@ export default (nitroApp: NitroApp) => {
 				memberBySocket.delete(socket.id)
 				removeUser(entry.room, entry.username)
 			}
-			console.log("❌ Client disconnected")
 		})
 	})
 	

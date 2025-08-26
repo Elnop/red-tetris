@@ -2,15 +2,13 @@ import { useNuxtApp } from "nuxt/app";
 import type { TypedSocket } from "~/types/socket";
 import { useRoomStore } from "~/stores/useRoomStore";
 import { useUserStore } from "~/stores/useUserStore";
-import { useGameStore } from "~/stores/useGameStore";
+import { storeToRefs } from "pinia";
 
 export function useSocketEmiters() {
 	const { $socket } = useNuxtApp() as unknown as { $socket: TypedSocket }
 	const roomStore = useRoomStore()
 	const userStore = useUserStore()
-	const gameStore = useGameStore()
-
-	const { isAlive } = gameStore
+	const { userColor } = storeToRefs(userStore)
 
 	function emitGameOver() {
 		try {
@@ -23,11 +21,10 @@ export function useSocketEmiters() {
 		
 		const gridData = serializedGrid
 		// const occupiedCells = gridData.filter(cell => cell === '1').length
-		
 		$socket.emit('tetris-grid', { 
 			room: roomStore.roomId, 
 			grid: gridData,
-			color: userStore.playerColor || '#FFFFFF',
+			color: userColor.value || '#FFFFFF',
 			username: userStore.username
 		} as any)
 	}

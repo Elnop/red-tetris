@@ -4,31 +4,49 @@ import { toCoords } from "~/utils/pieces"
 import { useRoomStore } from "~/stores/useRoomStore"
 import { useGhosts } from "./useGhostDisplay"
 import { useSocketEmiters } from "./socketEmiters"
+import { storeToRefs } from "pinia"
 
 export function useBoard() {
 	const gameStore = useGameStore()
 	const roomStore = useRoomStore()
 	const socketEmitters = useSocketEmiters()
 
-	const { grid, active, posX, posY, ROWS, COLS, updateLevelInfo, isAlive, canPlace, setLine, setPosY, setActive, setIsAlive } = gameStore
+	const {
+		ROWS,
+		COLS,
+		updateLevelInfo,
+		canPlace,
+		setLine,
+		setPosY,
+		setActive,
+		setIsAlive
+	} = gameStore
+
+	const {
+		grid,
+		active,
+		posX,
+		posY,
+		isAlive,
+	} = storeToRefs(gameStore)
 
 	const { emitLines, emitGridUpdate, emitGameOver } = socketEmitters
 
-	const flatCells = computed(() => gameStore.grid.flat())
+	const flatCells = computed(() => grid.value.flat())
 	// const flatGridColors = computed(() => grid.flat())
 
 	const mergeActiveToGrid = () => {
-		if (!active) return
-		for (const [dx, dy] of toCoords(active.matrix)) {
-			const px = posX + dx
-			const py = posY + dy
-			if (py >= 0 && py < ROWS && px >= 0 && px < COLS) grid[py]![px] = active.color
+		if (!active.value) return
+		for (const [dx, dy] of toCoords(active.value.matrix)) {
+			const px = posX.value + dx
+			const py = posY.value + dy
+			if (py >= 0 && py < ROWS && px >= 0 && px < COLS) grid.value[py]![px] = active.value.color
 		}
 	}
 
 	const serializedGrid = (): string[] => {
 		const out: string[] = []
-		const flat = grid.flat()
+		const flat = grid.value.flat()
 		for (let i = 0; i < flat.length; i++) {
 			// '1' pour les cellules occupées normales, 'W' pour les lignes blanches, '0' pour vide
 			const cell = flat[i]
@@ -44,16 +62,16 @@ export function useBoard() {
 	}
 
 	const isLineFull = (y: number): boolean => {
-		return grid[y]!.every((cell: string | null) => cell !== null && cell !== '#FFFFFF')
+		return grid.value[y]!.every((cell: string | null) => cell !== null && cell !== '#FFFFFF')
 	}
 	
 	const isWhiteLine = (y: number): boolean => {
-		return grid[y]!.every((cell: string | null) => cell === '#FFFFFF')
+		return grid.value[y]!.every((cell: string | null) => cell === '#FFFFFF')
 	}
 	
 	const removeLine = (y: number): void => {
-		grid.splice(y, 1)
-		grid.unshift(Array(COLS).fill(null))
+		grid.value.splice(y, 1)
+		grid.value.unshift(Array(COLS).fill(null))
 	}
 
 	const clearLines = (): void => {
@@ -79,10 +97,11 @@ export function useBoard() {
 	}
 
 	const addGarbageLines = (count: number) => {
-		if (!isAlive) return
+		if (!isAlive.value) return
 		// Décaler la grille vers le haut
-		for (let y = 0; y < ROWS - count; y++) {
-			setLine(y, grid[y + count]!)
+		for (let y = 0; y < ROWS - count; y++) {const flatCells = computed(() => gameStore.grid.flat())
+			// const flatGridColors = computed(() => grid.flat())
+			setLine(y, grid.value[y + count]!)
 		}
 		
 		// Ajouter les lignes de pénalité en bas (lignes blanches indestructibles)
@@ -92,10 +111,10 @@ export function useBoard() {
 		}
 		
 		// Si la pièce active est maintenant dans une position invalide, la remonter
-		if (active && !canPlace(active.matrix, posX, posY)) {
-			setPosY(posY - count)
+		if (active.value && !canPlace(active.value.matrix, posX.value, posY.value)) {
+			setPosY(posY.value - count)
 			// Si toujours invalide, game over
-			if (!canPlace(active.matrix, posX, posY)) {
+			if (!canPlace(active.value.matrix, posX.value, posY.value)) {
 				setActive(null)
 				setIsAlive(false)
 				emitGameOver()

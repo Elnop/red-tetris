@@ -9,15 +9,16 @@ import { useRoomStore } from "~/stores/useRoomStore"
 const { $socket } = useNuxtApp()
 const socket = $socket as TypedSocket
 
-const userStore = useUserStore()
 const route = useRoute()
+
+const userStore = useUserStore()
 const roomId = route.params.id as string
+const { playerColor } = userStore
 
 const isRunning = ref(false)
 const gameFinished = ref(false)
 
 const roomStore = useRoomStore()
-const myColor = computed(() => roomStore.users.find(u => u.username === userStore.username)?.color ?? '#FFFFFF')
 
 onMounted(() => {
 	const username = (userStore.username ?? '').trim()
@@ -39,6 +40,7 @@ onMounted(() => {
 	// Now join the room
 	if (userStore.username) {
 		socket.emit("join-room", { room: roomId, username: userStore.username })
+		roomStore.setRoomId(roomId)
 	}
 })
 
@@ -107,12 +109,7 @@ const startForRoom = () => {
 	</aside>
 	
 	<main class="game-container">
-		<Game 
-		:controlled="true" 
-		:room-id="roomId" 
-		:username="userStore.username ?? ''" 
-		:player-color="myColor" 
-		/>
+		<Game />
 	</main>
 </div>
 </div>

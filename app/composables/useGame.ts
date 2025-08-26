@@ -1,26 +1,23 @@
 import type { TypedSocket } from "~/types/socket"
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useNuxtApp } from 'nuxt/app'
 import { useGameStore } from "~/stores/useGameStore"
 import { useActivePiece } from "./useActivePiece"
 import { useGhosts } from "./useGhostDisplay"
 import { useBoard } from "./useBoard"
 import { rotateActiveCW } from "~/utils/pieces"
+import { storeToRefs } from "pinia"
 
 export function useGame() {
 	const gameStore = useGameStore()
 	
+
 	const activePiece = useActivePiece()
 	const ghosts = useGhosts()
 	const board = useBoard()
 	
 	const {
 		getNewDeltaTime,
-		softDrop,
-		isPlaying,
-		isAlive,
-		active,
-		dropTimer,
 		setDropTimer,
 		startGameLoop,
 		onPlayerLost,
@@ -31,19 +28,27 @@ export function useGame() {
 		setSoftDrop,
 		setPosX,
 		setActive,
-		posX,
-		posY,
 		setIsPlaying,
 		initQueue,
-		grid,
 		COLS,
 	} = gameStore
 	
+	const {
+		isPlaying,
+		isAlive,
+		active,
+		dropTimer,
+		posX,
+		posY,
+		grid,
+		softDrop,
+	} = storeToRefs(gameStore)
+
 	const { handleDrop, getCurrentBaseDropSpeed, trySpawnNextActivePiece, hardDrop, tryMoveActivePiece, getActivePieceStyle } = activePiece
 	const { onGhost, getGhostStyle } = ghosts
 	const { addGarbageLines } = board
 	const { $socket } = useNuxtApp() as unknown as { $socket: TypedSocket }
-	
+
 	function start() {
 		startGame(gameLoop)
 	}
@@ -77,7 +82,7 @@ export function useGame() {
 	
 	const tick = (dtMs: number): void => {
 		// Vérifications initiales
-		if (!isPlaying || !isAlive || !active) return
+		if (!isPlaying.value || !isAlive.value || !active.value) return
 		
 		// Calcul de la vitesse actuelle
 		const currentBaseDropMs = getCurrentBaseDropSpeed()
@@ -87,7 +92,7 @@ export function useGame() {
 			return
 		}
 		
-		const currentSpeed = softDrop ? SOFT_DROP_MS : currentBaseDropMs
+		const currentSpeed = softDrop.value ? SOFT_DROP_MS : currentBaseDropMs
 		
 		// Validation de la vitesse
 		if (currentSpeed === undefined) {
@@ -95,8 +100,8 @@ export function useGame() {
 			return
 		}
 		
-		setDropTimer(dropTimer + dtMs)
-		if (dropTimer >= currentSpeed) {
+		setDropTimer(dropTimer.value + dtMs)
+		if (dropTimer.value >= currentSpeed) {
 			handleDrop()
 		}
 	}
@@ -128,7 +133,7 @@ export function useGame() {
 	// ========= CONTROLS
 	
 	const onKeyDown = (e: KeyboardEvent) => {
-		if (!active || !isPlaying || !isAlive) return
+		if (!active.value || !isPlaying.value || !isAlive.value) return
 		switch (e.key) {
 			case 'ArrowLeft':
 			e.preventDefault()
@@ -140,7 +145,7 @@ export function useGame() {
 			break
 			case 'ArrowDown':
 			e.preventDefault()
-			if (!softDrop) {
+			if (!softDrop.value) {
 				setDropTimer(0) // Réinitialiser le timer quand on commence le soft drop
 			}
 			setSoftDrop(true)
@@ -148,14 +153,15 @@ export function useGame() {
 			case 'ArrowUp': {
 				e.preventDefault()
 				if (!e.repeat) {
-					const rotated = rotateActiveCW(active)
-					if (canPlace(rotated.matrix, posX, posY)) {
+					if (!active.value) return
+					const rotated = rotateActiveCW(active.value)
+					if (canPlace(rotated.matrix, posX.value, posY.value)) {
 						setActive(rotated)
-					} else if (canPlace(rotated.matrix, posX - 1, posY)) {
-						setPosX(posX - 1)
+					} else if (canPlace(rotated.matrix, posX.value - 1, posY.value)) {
+						setPosX(posX.value - 1)
 						setActive(rotated)
-					} else if (canPlace(rotated.matrix, posX + 1, posY)) {
-						setPosX(posX + 1)
+					} else if (canPlace(rotated.matrix, posX.value + 1, posY.value)) {
+						setPosX(posX.value + 1)
 						setActive(rotated)
 					}
 				}
@@ -177,7 +183,7 @@ export function useGame() {
 		y: Math.floor(idx / COLS)
 	})
 
-	const getCellValue = (x: number, y: number) => grid[y]?.[x]
+	const getCellValue = (x: number, y: number) => grid.value[y]?.[x]
 
 	const cellStyle = (idx: number) => {
 		const { x, y } = getCellCoordinates(idx)
@@ -198,7 +204,7 @@ export function useGame() {
 		}
 		
 		// Check for ghost pieces
-		return getGhostStyle(idx) || {}
+		return getGhostStyle(idx) || null
 	}
 	
 	// const countCells = (grid: string[], value: string): number => 

@@ -3,6 +3,7 @@ import { useGameStore } from "~/stores/useGameStore";
 import { toCoords } from "~/utils/pieces";
 import { useBoard } from "./useBoard";
 import { useSocketEmiters } from "./socketEmiters";
+import { storeToRefs } from "pinia";
 
 export function useActivePiece() {
 	const socketEmiters = useSocketEmiters()
@@ -10,24 +11,27 @@ export function useActivePiece() {
 	
 	const gameStore = useGameStore()
 	const {
-		active,
-		posX,
-		posY,
 		COLS,
 		ROWS,
 		setDropTimer,
 		tryMoveActivePiece,
-		isAlive,
-		isPlaying,
-		level,
 		canPlace,
 		refillQueue,
-		queue,
 		setActive,
 		setIsAlive,
 		setPosX,
 		setPosY,
 	} = gameStore
+
+	const {
+		active,
+		posX,
+		posY,
+		isAlive,
+		isPlaying,
+		level,
+		queue,
+	} = storeToRefs(gameStore)
 
 	const board = useBoard()
 	const { 
@@ -37,19 +41,19 @@ export function useActivePiece() {
 	} = board
 
 	const LEVEL_SPEEDS = [
-		1000, 793, 618, 473, 355, 262, 190, 135, 94, 64, 
-		43, 28, 18, 11, 7, 5, 5, 5, 4, 4,  // Niveaux 0-19
-		3, 3, 3, 2, 2, 2, 2, 2, 2, 2,      // Niveaux 20-29
-		1                                   // Niveau 30+
+		1000, 850, 700, 600, 500, 400, 350, 300, 250, 200,  // Niveaux 0-9
+		180, 160, 140, 120, 100, 90, 80, 70, 60, 50,        // Niveaux 10-19
+		40, 35, 30, 25, 20, 18, 16, 14, 12, 10,             // Niveaux 20-29
+		8                                                    // Niveau 30+
 	]
 
 	const activeIndexes = computed(() => {
 		const indices = new Set<number>()
-		if (!active) return indices
-		const coords = toCoords(active.matrix)
+		if (!active.value) return indices
+		const coords = toCoords(active.value.matrix)
 		for (const [dx, dy] of coords) {
-			const x = posX + dx
-			const y = posY + dy
+			const x = posX.value + dx
+			const y = posY.value + dy
 			if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
 				indices.add(y * COLS + x)
 			}
@@ -58,8 +62,8 @@ export function useActivePiece() {
 	})
 	
 	const getActivePieceStyle = (idx: number) => {
-		if (activeIndexes.value.has(idx) && active?.color) {
-			const color = active.color
+		if (activeIndexes.value.has(idx) && active.value?.color) {
+			const color = active.value.color
 			return { background: color, borderColor: color }
 		}
 		return null
@@ -73,7 +77,7 @@ export function useActivePiece() {
 	}
 
 	const hardDrop = () => {
-		if (!active || !isAlive) return
+		if (!active.value || !isAlive.value) return
 		while (tryMoveActivePiece(0, 1));
 		lockPiece()
 	}
@@ -81,24 +85,24 @@ export function useActivePiece() {
 	const lockPiece = () => {
 		mergeActiveToGrid()
 		clearLines()
-		if (isAlive) {
+		if (isAlive.value) {
 			emitGridUpdate(serializedGrid())
 			trySpawnNextActivePiece()
 		}
 	}
 
 	const getCurrentBaseDropSpeed = () => {
-		if (!isPlaying) return 1000 // Valeur par défaut
+		if (!isPlaying.value) return 1000 // Valeur par défaut
 		
 		// Utiliser la table de vitesse officielle de Tetris NES
 		// Pour les niveaux au-delà de 29, on utilise la même vitesse que le niveau 29
-		const effectiveLevel = Math.min(level, 29)
+		const effectiveLevel = Math.min(level.value, 29)
 		return LEVEL_SPEEDS[effectiveLevel] || LEVEL_SPEEDS[LEVEL_SPEEDS.length - 1]
 	}
 
 	const trySpawnNextActivePiece = () => {
 			refillQueue()
-			const next = queue[0]
+			const next = queue.value[0]
 			if (!next) return
 			const n = next.matrix.length
 			const spawnX = Math.floor((COLS - n) / 2)
@@ -106,7 +110,7 @@ export function useActivePiece() {
 			const minDy = Math.min(...coords.map(([_, dy]) => dy))
 			const spawnY = -minDy
 			if (canPlace(next.matrix, spawnX, spawnY)) {
-				setActive(queue.shift()!)
+				setActive(queue.value.shift()!)
 				setPosX(spawnX)
 				setPosY(spawnY)
 			} else {
