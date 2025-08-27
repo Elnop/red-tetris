@@ -3,7 +3,39 @@ import { toNodeListener } from "h3"
 import { createServer } from "http"
 import type { NitroApp } from "nitropack"
 
-const PLAYER_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FED766', '#2AB7CA', '#F0B7B3', '#97C1A9']
+// Palette de couleurs vives et bien distinctes
+const PLAYER_COLORS = [
+  '#FF6B6B', // Rouge vif
+  '#4ECDC4', // Turquoise
+  '#FED766', // Jaune
+  '#FF9F1C', // Orange
+  '#2EC4B6', // Vert menthe
+  '#E71D36', // Rouge vif
+  '#41B3A3', // Vert émeraude
+  '#FF6B6B', // Rouge clair
+  '#4CC9F0', // Bleu ciel
+  '#7209B7', // Violet
+  '#3A86FF', // Bleu vif
+  '#FF006E', // Rose vif
+  '#8338EC', // Violet électrique
+  '#FFBE0B', // Jaune or
+  '#FB5607', // Orange vif
+  '#3A86FF', // Bleu royal
+  '#FF006E', // Rose fuchsia
+  '#3A0CA3', // Bleu foncé
+  '#4CC9F0', // Bleu clair
+  '#7209B7'  // Violet foncé
+]
+
+// Mélanger le tableau de couleurs pour une meilleure répartition
+const shuffleArray = (array: any[]) => {
+  const newArray = [...array]
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+  }
+  return newArray
+}
 
 type User = {
 	username: string
@@ -116,7 +148,18 @@ export default (nitroApp: NitroApp) => {
 			// mémoriser l'appartenance
 			memberBySocket.set(socket.id, { room, username: clean })
 			if (!state.users.find(u => u.username === clean)) {
-				const color = PLAYER_COLORS[state.users.length % PLAYER_COLORS.length]!
+				// Créer une copie des couleurs disponibles
+				const availableColors = [...PLAYER_COLORS]
+				
+				// Retirer les couleurs déjà utilisées dans la salle
+				const usedColors = new Set(state.users.map(user => user.color))
+				const remainingColors = availableColors.filter(color => !usedColors.has(color))
+				
+				// Si on a épuisé toutes les couleurs uniques, on réinitialise avec toutes les couleurs
+				const colorsToUse = remainingColors.length > 0 ? remainingColors : [...PLAYER_COLORS]
+				
+				// Prendre une couleur aléatoire parmi celles disponibles
+				const color = shuffleArray(colorsToUse)[Math.floor(Math.random() * colorsToUse.length)] || '#000000'
 				state.users.push({ username: clean, alive: !state.running, socketId: socket.id, color })
 			}
 			
