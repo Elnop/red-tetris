@@ -260,12 +260,14 @@ export default (nitroApp: NitroApp) => {
 					io.to(winner.socketId).emit("tetris-win")
 					// Notifier les autres joueurs
 					socket.to(room).emit("player-lost", { username: winner.username })
+					// Notifier tout le monde de la fin de la partie avec le gagnant
+					state.running = false
+					io.to(room).emit("game-ended", { winner: winner.username })
 				}
-				state.running = false
-				io.to(room).emit("game-ended")
 			} else if (state.running && alivePlayers.length <= 1) {
 				state.running = false
-				io.to(room).emit("game-ended")
+				const lastPlayer = alivePlayers[0]?.username || ''
+				io.to(room).emit("game-ended", { winner: lastPlayer })
 			}
 		})
 		

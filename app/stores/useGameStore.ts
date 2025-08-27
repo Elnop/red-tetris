@@ -13,7 +13,8 @@ export const useGameStore = defineStore('game', () => {
 	const isAlive = ref(false)
 	const won = ref(false)
 	const disappearOpacity = ref(1)
-	const animationFrameId = ref<number>()
+	const disappearAnimationId = ref(0)
+	const winner = ref<string | null>(null)
 	const gameStartTime = ref(0)
 	const level = ref(0)
 	const linesCleared = ref(0)
@@ -31,10 +32,10 @@ export const useGameStore = defineStore('game', () => {
 	const lastMoveTime = ref(0)
 	const lastRotateTime = ref(0)
 	const dropInterval = ref(1000)
-	const disappearAnimationId = ref<number>(0)
-	let gameLoopInterval: ReturnType<typeof setInterval> | null = null
 	const lastTime = ref(0)
 	const dropTimer = ref(0)
+	const animationFrameId = ref<number>()
+	let gameLoopInterval: ReturnType<typeof setInterval> | null = null
 
 	let lastFrameTime = 0
 	
@@ -104,19 +105,29 @@ export const useGameStore = defineStore('game', () => {
 	
 	// ========= METHODS
 	
-	function startGameLoop(gameLoop: () => void) {
-		if (!gameLoopInterval) {
-			lastFrameTime = performance.now()
-			gameLoopInterval = setInterval(gameLoop, 1000 / FPS)
+	const startGameLoop = (gameLoop: () => void) => {
+		if (gameLoopInterval) {
+			clearInterval(gameLoopInterval)
 		}
+		gameLoopInterval = setInterval(gameLoop, 1000 / FPS)
 	}
 
 	const clearGameStates = () => {
+		if (gameLoopInterval) {
+			clearInterval(gameLoopInterval)
+			gameLoopInterval = null
+		}
+		if (animationFrameId.value) {
+			cancelAnimationFrame(animationFrameId.value)
+			animationFrameId.value = undefined
+		}
+		
 		grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
 		ghostGrids.value = {}
 		isAlive.value = true
 		isPlaying.value = false
 		won.value = false
+		winner.value = null
 		disappearOpacity.value = 1
 		posX.value = Math.floor((COLS - 4) / 2)
 		posY.value = 0
@@ -210,6 +221,7 @@ export const useGameStore = defineStore('game', () => {
 					// Clear the grid after animation completes
 					grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
 					disappearOpacity.value = 0
+					animationFrameId.value = undefined
 				}
 			}
 			
@@ -219,10 +231,13 @@ export const useGameStore = defineStore('game', () => {
 		}
 	}
 	
-	const onWin = () => {
-		won.value = true
+	const onWin = (winnerName: string) => {
+		console.log(winnerName)
+		if (winnerName === userStore.username)
+			won.value = true
 		isAlive.value = false
 		active.value = null
+		winner.value = winnerName
 	}
 	
 	return {
@@ -254,6 +269,7 @@ export const useGameStore = defineStore('game', () => {
 		setPosY,
 		setActive,
 		setIsAlive,
+		winner,
 		queue,
 		clearGameStates,
 		generateQueue,

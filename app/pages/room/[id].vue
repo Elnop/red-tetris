@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue"
 import { useRoute } from "vue-router"
-import { useUserStore } from "../../stores/useUserStore"
+import { useUserStore } from "~/stores/useUserStore"
+import { useGameStore } from "~/stores/useGameStore"
 import { useNuxtApp } from "nuxt/app"
 import type { TypedSocket } from "~/types/socket"
 import { useRoomStore } from "~/stores/useRoomStore"
@@ -13,11 +14,12 @@ const { $socket } = useNuxtApp()
 const socket = $socket as TypedSocket
 
 const userStore = useUserStore()
+const gameStore = useGameStore()
+const roomStore = useRoomStore()
 
 const isRunning = ref(false)
 const gameFinished = ref(false)
 
-const roomStore = useRoomStore()
 
 onMounted(() => {
 	const username = (userStore.username ?? '').trim()
@@ -41,9 +43,10 @@ onMounted(() => {
 		window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
 	})
 	
-	socket.on("game-ended", () => {
+	socket.on("game-ended", ({ winner }: { winner: string }) => {
 		isRunning.value = false
 		gameFinished.value = true
+		gameStore.onWin(winner)
 	})
 	
 	// Now join the room

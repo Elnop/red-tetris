@@ -6,11 +6,9 @@ import { useGameStore } from '~/stores/useGameStore';
 import { useRoomStore } from '~/stores/useRoomStore';
 import { useUserStore } from '~/stores/useUserStore';
 
-
 const roomStore = useRoomStore()
 const userStore = useUserStore()
 const gameStore = useGameStore()
-
 
 const { COLS, ROWS } = gameStore
 const game = useGame()
@@ -18,21 +16,24 @@ const { start, cellStyle } = game
 
 const board = useBoard()
 const { flatCells } = board
-
 </script>
+
 <template>
 	<div v-if="!gameStore.isPlaying" class="start-screen">
-		<template v-if="roomStore.leaderName != userStore.username">
-			<span style="color:#e5e7eb; font-size:20px;">En attente du chef…</span>
-		</template>
+		<span style="color:#e5e7eb; font-size:20px;">En attente du chef…</span>
 	</div>
 	<div v-else class="game-area">
 		<div class="board-container">
 			<div v-if="gameStore.won" class="game-over-overlay win-overlay">
-				<span>WIN</span>
+				<div class="game-over-content">
+					<div>VICTOIRE !</div>
+				</div>
 			</div>
 			<div v-else-if="!gameStore.isAlive" class="game-over-overlay">
-				<span>GAME OVER</span>
+				<div class="game-over-content">
+					<div>GAME OVER</div>
+					<div class="winner-name" v-if="gameStore.winner">{{ gameStore.winner }} a gagné</div>
+				</div>
 			</div>
 			<div class="board" :style="{ '--cols': String(COLS), '--rows': String(ROWS) }">
 				<div
@@ -45,7 +46,6 @@ const { flatCells } = board
 		</div>
 	</div>
 </template>
-
 
 <style scoped>
 .start-screen {
@@ -91,17 +91,32 @@ const { flatCells } = board
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	background: rgba(0, 0, 0, 0.2);
+	background: rgba(0, 0, 0, 0.3);
 	color: white;
-	font-size: 3em;
+	font-size: 2em;
 	font-weight: bold;
 	z-index: 10;
 	border-radius: 8px;
+	text-align: center;
+	padding: 20px;
+}
+
+.game-over-content {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.winner-name {
+	font-size: 1.5rem;
+	color: #FFD700;
+	text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .win-overlay {
-	background: rgba(255, 215, 0, 0.3);
+	background: rgba(255, 215, 0, 0.5);
 	color: #FFD700;
+	text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .board {
