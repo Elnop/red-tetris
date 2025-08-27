@@ -70,16 +70,36 @@ export default (nitroApp: NitroApp) => {
 	}
 	
 	const removeUser = (room: string, username: string) => {
+		console.log(`[REMOVE-USER] Tentative de suppression de ${username} de la salle ${room}`)
 		const state = rooms[room]
-		if (!state) return
+		if (!state) {
+			console.log(`[REMOVE-USER] Échec: la salle ${room} n'existe pas`)
+			return
+		}
+		
 		const before = state.users.length
-		state.users = state.users.filter((u) => u.username !== username)
+		state.users = state.users.filter((u) => {
+			const shouldKeep = u.username !== username
+			if (!shouldKeep) {
+				console.log(`[REMOVE-USER] Suppression de l'utilisateur: ${u.username} (${u.socketId})`)
+			}
+			return shouldKeep
+		})
+		
 		cleanRoom(room)
+		
 		if (state.users.length !== before) {
+			console.log(`[REMOVE-USER] Notification de la déconnexion de ${username} à la salle ${room}`)
 			io.to(room).emit("user-left", username)
 			broadcastUsers(room)
+		} else {
+			console.log(`[REMOVE-USER] Aucun utilisateur supprimé (${username} non trouvé)`)
 		}
-		if (state.users.length === 0) delete rooms[room]
+		
+		if (state.users.length === 0) {
+			console.log(`[REMOVE-USER] Suppression de la salle ${room} car elle est vide`)
+			delete rooms[room]
+		}
 	}
 	
 	io.on("connection", (socket) => {		
@@ -109,10 +129,40 @@ export default (nitroApp: NitroApp) => {
 			io.to(room).emit("user-joined", { username: clean })
 		})
 		
-		socket.on("leave-room", ({ room, username }) => {
+		socket.on("leave-room", ({ room, username }, callback) => {
+			console.log(`[LEAVE-ROOM] Début - Room: ${room}, Username: ${username}, Socket ID: ${socket.id}`)
+			
+			// Vérifier si l'utilisateur est bien dans la salle
+			const currentRoom = rooms[room]
+			if (!currentRoom) {
+				console.log(`[LEAVE-ROOM] La salle ${room} n'existe pas`)
+				callback?.({ success: false, error: 'Room does not exist' })
+				return
+			}
+			
+			// Retirer l'utilisateur de la salle
 			socket.leave(room)
 			memberBySocket.delete(socket.id)
-			removeUser(room, username)
+			
+			// Supprimer l'utilisateur de la liste des utilisateurs
+			const userIndex = currentRoom.users.findIndex(u => u.username === username)
+			if (userIndex !== -1) {
+				currentRoom.users.splice(userIndex, 1)
+				console.log(`[LEAVE-ROOM] Utilisateur ${username} retiré de la salle ${room}`)
+			}
+			
+			// Notifier les autres utilisateurs
+			io.to(room).emit("user-left", username)
+			broadcastUsers(room)
+			
+			// Nettoyer la salle si elle est vide
+			if (currentRoom.users.length === 0) {
+				console.log(`[LEAVE-ROOM] Suppression de la salle ${room} car elle est vide`)
+				delete rooms[room]
+			}
+			
+			console.log(`[LEAVE-ROUN] Fin - Utilisateur ${username} a quitté la salle ${room}`)
+			callback?.({ success: true })
 		})
 		
 		// Lancer la partie: payload { room, seed }
@@ -162,8 +212,13 @@ export default (nitroApp: NitroApp) => {
 			const alivePlayers = state.users.filter(u => u.alive)
 			if (state.running && state.users.length > 1 && alivePlayers.length === 1) {
 				const winner = alivePlayers[0]
-				if (winner) io.to(winner.socketId).emit("tetris-win")
-					state.running = false
+				if (winner) {
+					// Notifier le gagnant
+					io.to(winner.socketId).emit("tetris-win")
+					// Notifier les autres joueurs
+					socket.to(room).emit("player-lost", { username: winner.username })
+				}
+				state.running = false
 				io.to(room).emit("game-ended")
 			} else if (state.running && alivePlayers.length <= 1) {
 				state.running = false

@@ -25,9 +25,6 @@ const { flatCells } = board
 		<template v-if="roomStore.leaderName != userStore.username">
 			<span style="color:#e5e7eb; font-size:20px;">En attente du chef…</span>
 		</template>
-		<template v-else>
-			<button @click="start" class="start-btn">Start Game</button>
-		</template>
 	</div>
 	<div v-else class="game-area">
 		<div class="board-container">

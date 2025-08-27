@@ -1,5 +1,5 @@
 import type { TypedSocket } from "~/types/socket"
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useNuxtApp } from 'nuxt/app'
 import { useGameStore } from "~/stores/useGameStore"
 import { useActivePiece } from "./useActivePiece"
@@ -7,10 +7,15 @@ import { useGhosts } from "./useGhostDisplay"
 import { useBoard } from "./useBoard"
 import { rotateActiveCW } from "~/utils/pieces"
 import { storeToRefs } from "pinia"
+import { useRoomStore } from "~/stores/useRoomStore"
+import { useUserStore } from "~/stores/useUserStore"
 
 export function useGame() {
 	const gameStore = useGameStore()
-	
+	const roomStore = useRoomStore()
+	const userStore = useUserStore()
+
+	const gameLoopInterval = ref<number | null>(null)
 
 	const activePiece = useActivePiece()
 	const ghosts = useGhosts()
@@ -118,16 +123,41 @@ export function useGame() {
 		startGameLoop(gameLoop)
 	})
 	
+	const leaveRoom = () => {
+		if ($socket && $socket.connected) {
+			$socket.emit('leave-room', { 
+				room: roomStore.roomId,
+				username: userStore.username
+			})
+		}
+	}
+
 	onBeforeUnmount(() => {
-		startGameLoop(gameLoop)
+		// Arrêter la boucle de jeu
+		if (gameLoopInterval.value) {
+			clearInterval(gameLoopInterval.value)
+			gameLoopInterval.value = null
+		}
+
+		// Nettoyer les écouteurs d'événements
 		window.removeEventListener('keydown', onKeyDown)
 		window.removeEventListener('keyup', onKeyUp)
 		window.removeEventListener('tetris-start', onRoomStart as EventListener)
-		$socket.off('tetris-ghost', onGhost)
-		$socket.off('user-left', onUserLeft)
-		$socket.off('player-lost', onPlayerLost)
-		$socket.off('tetris-win', onWin)
-		$socket.off('tetris-receive-lines')
+		
+		// Nettoyer les écouteurs Socket.IO
+		if ($socket) {
+			$socket.off('tetris-ghost', onGhost)
+			$socket.off('user-left', onUserLeft)
+			$socket.off('player-lost', onPlayerLost)
+			$socket.off('tetris-win', onWin)
+			$socket.off('tetris-receive-lines')
+			
+			// Quitter la salle
+			leaveRoom()
+		}
+		
+		// Réinitialiser l'état du jeu
+		clearGameStates()
 	})
 	
 	// ========= CONTROLS
@@ -206,26 +236,6 @@ export function useGame() {
 		// Check for ghost pieces
 		return getGhostStyle(idx) || null
 	}
-	
-	// const countCells = (grid: string[], value: string): number => 
-	// 	grid?.filter(cell => String(cell).trim() === value).length || 0
-	
-	// const getGridSample = (grid: string[]): string => 
-	// 	grid?.slice(0, 10).join('') || ''
-	
-	// const generateGridPreview = (grid: string[], cols: number): string => {
-	// 	const gridPreview = []
-	// 	for (let y = 0; y < 4; y++) { // Afficher les 4 premières lignes
-	// 		const row = []
-	// 		for (let x = 0; x < 10; x++) {
-	// 			const idx = y * cols + x
-	// 			const cell = grid[idx] || '0'
-	// 			row.push(cell === '1' ? '█' : cell === 'W' ? 'W' : '.')
-	// 		}
-	// 		gridPreview.push(row.join(''))
-	// 	}
-	// 	return gridPreview.join('\n    ')
-	// }
 	
 	return { start, cellStyle }
 }
