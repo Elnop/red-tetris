@@ -226,13 +226,20 @@ export default (nitroApp: NitroApp) => {
 			}
 		})
 		
-		socket.on("disconnect", () => {
-			const entry = memberBySocket.get(socket.id)
-			if (entry) {
-				memberBySocket.delete(socket.id)
-				removeUser(entry.room, entry.username)
-			}
-		})
+		// socket.on("disconnect", (reason) => {
+		// 	console.log(`Client disconnected: ${socket.id} (${reason})`)
+		// 	const entry = memberBySocket.get(socket.id)
+		// 	if (entry) {
+		// 		console.log(`Removing user ${entry.username} from room ${entry.room} due to disconnection`)
+		// 		memberBySocket.delete(socket.id)
+		// 		// Use a small delay to handle page navigation vs tab closing
+		// 		setTimeout(() => {
+		// 			if (!Array.from(memberBySocket.values()).some(u => u.username === entry.username)) {
+		// 				removeUser(entry.room, entry.username)
+		// 			}
+		// 		}, 1000) // Wait 1 second before removing to handle page navigation
+		// 	}
+		// })
 	})
 	
 	// ⚠️ Lancer le serveur HTTP personnalisé

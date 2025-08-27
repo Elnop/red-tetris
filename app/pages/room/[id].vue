@@ -5,15 +5,14 @@ import { useUserStore } from "../../stores/useUserStore"
 import { useNuxtApp } from "nuxt/app"
 import type { TypedSocket } from "~/types/socket"
 import { useRoomStore } from "~/stores/useRoomStore"
+import type { UserData } from "~/types/game"
 
+const route = useRoute()
+const roomId = route.params.id as string
 const { $socket } = useNuxtApp()
 const socket = $socket as TypedSocket
 
-const route = useRoute()
-
 const userStore = useUserStore()
-const roomId = route.params.id as string
-const { playerColor } = userStore
 
 const isRunning = ref(false)
 const gameFinished = ref(false)
@@ -27,6 +26,16 @@ onMounted(() => {
 		userStore.genUsername()
 	}
 	
+	socket.on("room-users", (data: { users: UserData[] }) => {
+		console.log("room-users", data.users)
+		roomStore.setUsers(data.users)
+		userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
+	})
+	
+	socket.on("room-leader", (data: { username: string | null }) => {
+		roomStore.setLeader(data.username)
+	})
+
 	socket.on("tetris-start", ({ seed }: { seed: number }) => {
 		isRunning.value = true
 		window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
@@ -46,7 +55,7 @@ onMounted(() => {
 
 const leave = () => {
 	if (userStore.username) {
-		socket.emit("leave-room", { room: roomId })
+		socket.emit("leave-room", { room: roomId, username: userStore.username })
 	}
 }
 window.addEventListener("beforeunload", leave)

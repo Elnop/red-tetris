@@ -1,4 +1,5 @@
 import { Socket } from 'socket.io-client'
+import type { UserData } from './game';
 
 declare module 'socket.io-client' {
   interface Socket {
@@ -11,7 +12,7 @@ declare module 'socket.io-client' {
     emit(event: 'tetris-game-over', data: { room: string; username: string }): this;
     
     // Événements reçus par le client
-    on(event: 'room-users', callback: (data: { users: Array<{ username: string; alive: boolean }> }) => void): this;
+    on(event: 'room-users', callback: (data: { users: UserData[] }) => void): this;
     on(event: 'room-leader', callback: (data: { username: string | null }) => void): this;
     on(event: 'user-joined', callback: (data: { username: string }) => void): this;
     on(event: 'user-left', callback: (username: string) => void): this;
