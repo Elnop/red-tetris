@@ -1,12 +1,29 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useRouter } from '#app';
 import { useUserStore } from '~/stores/useUserStore';
+import { validateUsername, validateRoomName } from '~/utils/validation';
 
 const userStore = useUserStore()
-
 const router = useRouter()
 
+const errorMessage = ref('')
+
 function joinHandler() {
+	const usernameError = validateUsername(userStore.username || '')
+	const roomError = validateRoomName(userStore.roomName || '')
+	
+	if (usernameError) {
+		errorMessage.value = usernameError
+		return
+	}
+	
+	if (roomError) {
+		errorMessage.value = roomError
+		return
+	}
+	
+	errorMessage.value = ''
 	router.push(`/room/${userStore.roomName}`)
 }
 
@@ -27,9 +44,24 @@ function joinHandler() {
 		</div>
 		<div class="input-block">
 			<label for="username">Username:</label>
-			<input id="username" v-model="userStore.username" />
+			<input 
+			id="username" 
+			v-model="userStore.username" 
+			@input="errorMessage = ''"
+			maxlength="20"
+			placeholder="3-20 caractères alphanumériques"
+			/>
 			<label for="room">Room:</label>
-			<input id="room" v-model="userStore.roomName" />
+			<input 
+			id="room" 
+			v-model="userStore.roomName" 
+			@input="errorMessage = ''"
+			maxlength="20"
+			placeholder="3-20 caractères alphanumériques"
+			/>
+			<div v-if="errorMessage" class="error-message">
+				{{ errorMessage }}
+			</div>
 		</div>
 		<div class="button-block">
 			<RTButton text="join" :onClick="joinHandler" class="rtb-btn" />
@@ -106,7 +138,7 @@ function joinHandler() {
 	border: 2px solid #e53935;
 	border-radius: 6px;
 	margin-bottom: 0.7rem;
-	width: 220px;
+	width: 420px;
 	font-size: 1rem;
 	background: #fff;
 	color: #b71c1c;
@@ -116,6 +148,26 @@ function joinHandler() {
 .input-block input:focus {
 	border-color: #b71c1c;
 	outline: none;
+}
+
+.input-block input::placeholder {
+	color: #999;
+	font-size: 0.7rem;
+	opacity: 0.7;
+}
+
+.error-message {
+	color: #ff5252;
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.7rem;
+	margin-top: 0.5rem;
+	text-align: center;
+	max-width: 220px;
+	line-height: 1.3;
+	min-height: 2.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 .button-block {
 	display: flex;
