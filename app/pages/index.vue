@@ -3,59 +3,51 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from '#app';
 import { useUserStore } from '~/stores/useUserStore';
 import { validateUsername, validateRoomName } from '~/utils/validation';
-import { useNuxtApp } from 'nuxt/app';
-import type { TypedSocket } from '~/types/socket';
+import { useSocketEmiters } from '~/composables/socketEmiters';
 
 const userStore = useUserStore()
 const router = useRouter()
-const { $socket } = useNuxtApp()
-const socket = $socket as TypedSocket
+
+const { emitUserNameIsTaken } = useSocketEmiters()
 
 const errorMessage = ref('')
 const isLoading = ref(false)
 
 async function joinHandler() {
-  const usernameError = validateUsername(userStore.username || '')
-  const roomError = validateRoomName(userStore.roomName || '')
-  
-  if (usernameError) {
-    errorMessage.value = usernameError
-    return
-  }
-  
-  if (roomError) {
-    errorMessage.value = roomError
-    return
-  }
-  
-  errorMessage.value = ''
-  isLoading.value = true
-  
-  try {
-    // Check if username is available
-    const isAvailable = await new Promise<boolean>((resolve) => {
-      socket.emit('check-username', {
-        room: userStore.roomName,
-        username: userStore.username
-      }, (response: { available: boolean }) => {
-        resolve(response.available)
-      })
-    })
-    
-    if (isAvailable) {
-      // If username is available, navigate to the room
-      router.push(`/room/${userStore.roomName}`)
-    } else {
-      // If username is taken, generate a new one and try again
-      userStore.genUsername()
-      errorMessage.value = 'Ce pseudo est déjà pris. Un nouveau pseudo a été généré.'
-    }
-  } catch (error) {
-    console.error('Error checking username:', error)
-    errorMessage.value = 'Une erreur est survenue. Veuillez réessayer.'
-  } finally {
-    isLoading.value = false
-  }
+	const usernameError = validateUsername(userStore.username || '')
+	const roomError = validateRoomName(userStore.roomName || '')
+	
+	if (usernameError) {
+		errorMessage.value = usernameError
+		return
+	}
+	
+	if (roomError) {
+		errorMessage.value = roomError
+		return
+	}
+	
+	errorMessage.value = ''
+	isLoading.value = true
+	
+	try {
+		// Check if username is available
+		const isAvailable = await emitUserNameIsTaken()
+		
+		if (isAvailable) {
+			// If username is available, navigate to the room
+			router.push(`/room/${userStore.roomName}`)
+		} else {
+			// If username is taken, generate a new one and try again
+			userStore.genUsername()
+			errorMessage.value = 'Ce pseudo est déjà pris. Un nouveau pseudo a été généré.'
+		}
+	} catch (error) {
+		console.error('Error checking username:', error)
+		errorMessage.value = 'Une erreur est survenue. Veuillez réessayer.'
+	} finally {
+		isLoading.value = false
+	}
 }
 
 // function createHandler() {
@@ -67,12 +59,6 @@ async function joinHandler() {
 <template>
 	<div class="page-container">
 		<div class="project-title">Red Tetris</div>
-		<div class="info-block">
-			<div class="big-label">Username</div>
-			<div class="big-value">{{ userStore.username }}</div>
-			<div class="big-label">Room</div>
-			<div class="big-value">{{ userStore.roomName }}</div>
-		</div>
 		<div class="input-block">
 			<label for="username">Username:</label>
 			<input 
@@ -96,11 +82,11 @@ async function joinHandler() {
 		</div>
 		<div class="button-block">
 			<RTButton 
-  :text="isLoading ? 'Chargement...' : 'join'" 
-  :onClick="joinHandler" 
-  class="rtb-btn" 
-  :disabled="isLoading"
-/>
+			:text="isLoading ? 'Chargement...' : 'join'" 
+			:onClick="joinHandler" 
+			class="rtb-btn" 
+			:disabled="isLoading"
+			/>
 			<!-- <Button text="Create" :onClick="createHandler" class="rtb-btn" /> -->
 		</div>
 	</div>

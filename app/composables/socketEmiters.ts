@@ -14,13 +14,23 @@ export function useSocketEmiters() {
 	const gameStore = useGameStore()
 	const { userColor } = storeToRefs(userStore)
 	
+	function emitUserNameIsTaken(): Promise<boolean> {
+		return new Promise<boolean>((resolve) => {
+			socket.emit('check-username', {
+				room: roomStore.roomId,
+				username: userStore.username
+			}, (response: { available: boolean }) => {
+				resolve(response.available)
+			})
+		})
+	}
 	function emitStart(seed: number) {
-		if (!roomStore.roomId || !userStore.username) return
+		if (!roomStore.roomId || !userStore.username || !socket || !socket.connected) return
 		socket.emit("tetris-start", { room: roomStore.roomId, seed })
 	}
 	
 	function emitLeaveRoom() {
-		if (!roomStore.roomId || !userStore.username) return
+		if (!roomStore.roomId || !userStore.username || !socket || !socket.connected) return
 		socket.emit('leave-room', { 
 			room: roomStore.roomId,
 			username: userStore.username
@@ -32,7 +42,7 @@ export function useSocketEmiters() {
 	}
 	
 	const emitGridUpdate = (serializedGrid: string[]): void => {
-		if (!roomStore.roomId || !userStore.username) return
+		if (!roomStore.roomId || !userStore.username || !socket || !socket.connected) return
 		
 		const gridData = serializedGrid
 		// const occupiedCells = gridData.filter(cell => cell === '1').length
@@ -45,7 +55,7 @@ export function useSocketEmiters() {
 	}
 	
 	function emitLines(count: number) {
-		if (!count || !roomStore.roomId || !userStore.username) return
+		if (!count || !roomStore.roomId || !userStore.username || !socket || !socket.connected) return
 		socket.emit('tetris-send-lines', { 
 			room: roomStore.roomId,
 			count: count
@@ -53,7 +63,7 @@ export function useSocketEmiters() {
 	}
 	
 	function emitJoinRoom() {
-		if (!roomStore.roomId || !userStore.username) return
+		if (!roomStore.roomId || !userStore.username || !socket || !socket.connected) return
 		socket.emit('join-room', { 
 			room: roomStore.roomId,
 			username: userStore.username
@@ -132,6 +142,7 @@ export function useSocketEmiters() {
 		clearGameSocketListeners,
 		emitJoinRoom,
 		emitLeaveRoom,
-		emitStart
+		emitStart,
+		emitUserNameIsTaken
 	}
 }
