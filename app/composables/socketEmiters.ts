@@ -1,42 +1,121 @@
-import { useNuxtApp } from "nuxt/app";
+import { navigateTo, useNuxtApp } from "nuxt/app";
 import type { TypedSocket } from "~/types/socket";
 import { useRoomStore } from "~/stores/useRoomStore";
 import { useUserStore } from "~/stores/useUserStore";
 import { storeToRefs } from "pinia";
+import type { UserData } from "~/types/game";
+import { useGameStore } from "#imports";
 
 export function useSocketEmiters() {
-	const { $socket } = useNuxtApp() as unknown as { $socket: TypedSocket }
+	const { $socket } = useNuxtApp()
+	const socket = $socket as TypedSocket
 	const roomStore = useRoomStore()
 	const userStore = useUserStore()
+	const gameStore = useGameStore()
 	const { userColor } = storeToRefs(userStore)
+	
+	function emitStart(seed: number) {
+		if (!roomStore.roomId || !userStore.username) return
+		socket.emit("tetris-start", { room: roomStore.roomId, seed })
+	}
+
+	function emitLeaveRoom() {
+		if (!roomStore.roomId || !userStore.username) return
+		socket.emit('leave-room', { 
+			room: roomStore.roomId,
+			username: userStore.username
+		})
+	}
 
 	function emitGameOver() {
 		try {
-			$socket.emit('tetris-game-over', { room: roomStore.roomId ?? 'default', username: userStore.username ?? 'me' })
+			socket.emit('tetris-game-over', { room: roomStore.roomId ?? 'default', username: userStore.username ?? 'me' })
 		} catch {}
 	}
-
+	
 	const emitGridUpdate = (serializedGrid: string[]): void => {
 		if (!roomStore.roomId || !userStore.username) return
 		
 		const gridData = serializedGrid
 		// const occupiedCells = gridData.filter(cell => cell === '1').length
-		$socket.emit('tetris-grid', { 
+		socket.emit('tetris-grid', { 
 			room: roomStore.roomId, 
 			grid: gridData,
 			color: userColor.value || '#FFFFFF',
 			username: userStore.username
-		} as any)
+		})
 	}
-
+	
 	function emitLines(count: number) {
-		if (count < 2 || !roomStore.roomId || !userStore.username) return
-		$socket.emit('tetris-send-lines', { 
+		if (!count || !roomStore.roomId || !userStore.username) return
+		socket.emit('tetris-send-lines', { 
 			room: roomStore.roomId,
 			count: count
-		} as any)
+		})
 	}
 
+	function emitJoinRoom() {
+		if (!roomStore.roomId || !userStore.username) return
+		socket.emit('join-room', { 
+			room: roomStore.roomId,
+			username: userStore.username
+		})
+	}
+	
+	function initRoomSocketListeners(setIsRunning: (value: boolean) => void, setGameFinished: (value: boolean) => void) {
+		socket.on("room-users", (data: { users: UserData[] }) => {
+			console.log("room-users", data.users)
+			roomStore.setUsers(data.users)
+			userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
+		})
+		
+		socket.on("room-leader", (data: { username: string | null }) => {
+			roomStore.setLeader(data.username)
+		})
+		
+		socket.on("tetris-start", ({ seed }: { seed: number }) => {
+			setIsRunning(true)
+			window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
+		})
+		
+		socket.on("game-ended", ({ winner }: { winner: string }) => {
+			setIsRunning(false)
+			setGameFinished(true)
+			gameStore.onWin(winner)
+		})
+		
+		// Error handling for socket connection
+		socket.on('connect_error', (error) => {
+			console.error('Connection error:', error)
+			navigateTo('/')
+		})
+	}
+	
+	function initGameSocketListeners() {
+		
+	}
 
-	return { emitGameOver, emitGridUpdate, emitLines }
+	function clearRoomSocketListeners() {
+		socket.off("room-users")
+		socket.off("room-leader")
+		socket.off("tetris-start")
+		socket.off("game-ended")
+	}
+
+	function clearGameSocketListeners() {
+		
+	}
+	
+	return {
+		emitGameOver,
+		emitGridUpdate,
+		emitLines,
+		initRoomSocketListeners,
+		initGameSocketListeners,
+		clearRoomSocketListeners,
+		clearGameSocketListeners,
+		emitJoinRoom,
+		emitLeaveRoom,
+		emitStart
+	}
 }

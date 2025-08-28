@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue"
+import { ref, onMounted, onUnmounted } from "vue"
 import { useRoute } from "vue-router"
 import { useUserStore } from "~/stores/useUserStore"
 import { useGameStore } from "~/stores/useGameStore"
 import { useNuxtApp } from "nuxt/app"
 import type { TypedSocket } from "~/types/socket"
 import { useRoomStore } from "~/stores/useRoomStore"
-import type { UserData } from "~/types/game"
-import { navigateTo } from "#imports"
+import { navigateTo, useSocketEmiters } from "#imports"
 
 const route = useRoute()
 const roomId = route.params.id as string
@@ -21,64 +20,34 @@ const roomStore = useRoomStore()
 const isRunning = ref(false)
 const gameFinished = ref(false)
 
+const { emitStart, emitJoinRoom, initRoomSocketListeners, emitLeaveRoom, clearRoomSocketListeners } = useSocketEmiters()
+
+function setIsRunning(value: boolean) {
+	isRunning.value = value
+}
+
+function setGameFinished(value: boolean) {
+	gameFinished.value = value
+}
 
 onMounted(() => {
-  const username = (userStore.username ?? '').trim()
-  if (!username) {
-    // Redirect to home if no username is set
-    navigateTo('/')
-    return
-  }
-
-  // Join the room immediately since we've already validated the username
-  socket.emit("join-room", { room: roomId, username })
-  roomStore.setRoomId(roomId)
-  
-  // Setup socket listeners
-  socket.on("room-users", (data: { users: UserData[] }) => {
-    console.log("room-users", data.users)
-    roomStore.setUsers(data.users)
-    userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
-  })
-	
-	socket.on("room-leader", (data: { username: string | null }) => {
-		roomStore.setLeader(data.username)
-	})
-
-	socket.on("tetris-start", ({ seed }: { seed: number }) => {
-		isRunning.value = true
-		window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
-	})
-	
-	socket.on("game-ended", ({ winner }: { winner: string }) => {
-		isRunning.value = false
-		gameFinished.value = true
-		gameStore.onWin(winner)
-	})
-	
-  // Error handling for socket connection
-  socket.on('connect_error', (error) => {
-    console.error('Connection error:', error)
-    navigateTo('/')
-  })
+	const username = (userStore.username ?? '').trim()
+	if (!username) {
+		navigateTo('/')
+		return
+	}
+	roomStore.setRoomId(roomId)
+	initRoomSocketListeners(setIsRunning, setGameFinished)
+	emitJoinRoom()
+	window.addEventListener("beforeunload", emitLeaveRoom)
+	window.addEventListener("pagehide", emitLeaveRoom)
 })
 
-const leave = () => {
-	if (userStore.username) {
-		socket.emit("leave-room", { room: roomId, username: userStore.username })
-	}
-}
-window.addEventListener("beforeunload", leave)
-window.addEventListener("pagehide", leave)
-
 onUnmounted(() => {
-	leave()
-	window.removeEventListener("beforeunload", leave)
-	window.removeEventListener("pagehide", leave)
-	socket.off("room-users")
-	socket.off("room-leader")
-	socket.off("tetris-start")
-	socket.off("game-ended")
+	emitLeaveRoom()
+	window.removeEventListener("beforeunload", emitLeaveRoom)
+	window.removeEventListener("pagehide", emitLeaveRoom)
+	clearRoomSocketListeners()
 })
 
 const amLeader = () => roomStore.leaderName === userStore.username
@@ -86,7 +55,8 @@ const amLeader = () => roomStore.leaderName === userStore.username
 const startForRoom = () => {
 	const seed = Math.floor(Math.random() * 2 ** 31)
 	isRunning.value = true
-	socket.emit("tetris-start", { room: roomId, seed })
+	emitStart(seed)
+	
 }
 </script>
 

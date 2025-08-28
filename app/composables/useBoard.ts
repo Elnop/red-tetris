@@ -92,7 +92,7 @@ export function useBoard() {
 			// Émettre un événement séparé pour les lignes complétées
 			if (!roomStore.roomId)
 				return
-			emitLines(linesRemoved)
+			emitLines(linesRemoved-1)
 		}
 	}
 
