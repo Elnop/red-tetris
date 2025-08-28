@@ -3,12 +3,13 @@ import { computed, ref } from "vue"
 import type { BoardCell, GhostData } from "~/types/game"
 import { generateQueue, generateQueueFromSeed, toCoords, type ActivePiece } from "~/utils/pieces"
 import { useUserStore } from "./useUserStore"
+import { useRoomStore } from "#imports"
 
 export const useGameStore = defineStore('game', () => {
 	const FPS = 60
 	const COLS = 10
 	const ROWS = 20
-
+	
 	const isPlaying = ref(false)
 	const isAlive = ref(false)
 	const won = ref(false)
@@ -36,26 +37,31 @@ export const useGameStore = defineStore('game', () => {
 	const dropTimer = ref(0)
 	const animationFrameId = ref<number>()
 	let gameLoopInterval: ReturnType<typeof setInterval> | null = null
-
+	
 	let lastFrameTime = 0
 	
 	const userStore = useUserStore()
-
+	const roomStore = useRoomStore()
+	
 	const flatCells = computed(() => { 
 		return grid.value.flat()
 	})
 	// const flatGridColors = computed(() => grid.flat())
-
+	
 	// ========== SETTERS
-
+	
+	function removeGhost(username: string) {
+		delete ghostGrids.value[username]
+	}
+	
 	function setActive(value: ActivePiece | null) {
 		active.value = value
 	}
-
+	
 	function setIsAlive(value: boolean) {
 		isAlive.value = value
 	}
-
+	
 	function setPosY(value: number) {
 		posY.value = value
 	}
@@ -67,29 +73,29 @@ export const useGameStore = defineStore('game', () => {
 		if (y >= 0 && y < ROWS && x >= 0 && x < COLS)
 			grid.value[y]![x] = value
 		else
-			console.warn(`Invalid grid cell coordinates: x=${x}, y=${y}`)
+		console.warn(`Invalid grid cell coordinates: x=${x}, y=${y}`)
 	}
-
-
+	
+	
 	function setLine(y: number, value: BoardCell[]) {
 		if (y >= 0 && y < ROWS)
 			grid.value[y] = value
 		else
-			console.warn(`Invalid grid line index: y=${y}`)
+		console.warn(`Invalid grid line index: y=${y}`)
 	}
-
+	
 	function setPosX(value: number) {
 		posX.value = value
 	}
-
+	
 	function setSoftDrop(value: boolean) {
 		softDrop.value = value
 	}
-
+	
 	function initQueue(seed?: number) {
 		queue.value = seed === undefined ? generateQueue(14) : generateQueueFromSeed(seed, 200)
 	}
-
+	
 	function setIsPlaying(value: boolean) {
 		isPlaying.value = value
 	}
@@ -111,7 +117,7 @@ export const useGameStore = defineStore('game', () => {
 		}
 		gameLoopInterval = setInterval(gameLoop, 1000 / FPS)
 	}
-
+	
 	const clearGameStates = () => {
 		if (gameLoopInterval) {
 			clearInterval(gameLoopInterval)
@@ -159,11 +165,11 @@ export const useGameStore = defineStore('game', () => {
 		}
 		return false
 	}
-
+	
 	const refillQueue = () => {
 		if (queue.value.length < 7) queue.value.push(...generateQueue(7))
-	}
-
+		}
+	
 	const updateLevelInfo = (linesRemoved: number): void => {
 		linesCleared.value += linesRemoved
 		const newLevel = Math.floor(linesCleared.value / 10)
@@ -175,7 +181,7 @@ export const useGameStore = defineStore('game', () => {
 			linesToNextLevel.value -= linesRemoved
 		}
 	}
-
+	
 	const canPlace = (matrix: ActivePiece['matrix'], x: number, y: number): boolean => {
 		for (const [dx, dy] of toCoords(matrix)) {
 			const px = x + dx
@@ -187,47 +193,11 @@ export const useGameStore = defineStore('game', () => {
 		}
 		return true
 	}
-
+	
 	const updateGhostGrids = (username: string, ghostData: GhostData): void => {
 		ghostGrids.value = {
 			...ghostGrids.value,
 			[username]: ghostData
-		}
-	}
-
-	const onUserLeft = (username: string) => {
-		delete ghostGrids.value[username]
-	}
-
-	const onPlayerLost = ({ username }: { username: string }) => {
-		if (username === userStore.username) {
-			// If it's the current player, trigger the disappearing animation
-			isAlive.value = false
-			
-			// Animate the grid cells disappearing
-			const fadeOutDuration = 1500 // 1.5 seconds
-			const startTime = Date.now()
-			
-			const animateDisappear = () => {
-				const elapsed = Date.now() - startTime
-				const progress = Math.min(elapsed / fadeOutDuration, 1)
-				
-				// Update the opacity based on progress
-				disappearOpacity.value = 1 - progress
-				
-				if (progress < 1) {
-					animationFrameId.value = requestAnimationFrame(animateDisappear)
-				} else {
-					// Clear the grid after animation completes
-					grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
-					disappearOpacity.value = 0
-					animationFrameId.value = undefined
-				}
-			}
-			
-			animateDisappear()
-		} else {
-			onUserLeft(username)
 		}
 	}
 	
@@ -238,6 +208,28 @@ export const useGameStore = defineStore('game', () => {
 		isAlive.value = false
 		active.value = null
 		winner.value = winnerName
+	}
+	
+	function disappear() {
+		isAlive.value = false
+		const fadeOutDuration = 1500
+		const startTime = Date.now()
+		
+		const animateDisappear = () => {
+			const elapsed = Date.now() - startTime
+			const progress = Math.min(elapsed / fadeOutDuration, 1)
+			disappearOpacity.value = 1 - progress
+			
+			if (progress < 1) {
+				animationFrameId.value = requestAnimationFrame(animateDisappear)
+			} else {
+				grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
+				disappearOpacity.value = 0
+				animationFrameId.value = undefined
+			}
+		}
+		
+		animateDisappear()
 	}
 	
 	return {
@@ -260,10 +252,9 @@ export const useGameStore = defineStore('game', () => {
 		startGameLoop,
 		ghostGrids,
 		updateGhostGrids,
-		onPlayerLost,
+		disappear,
 		onWin,
 		won,
-		onUserLeft,
 		setLine,
 		canPlace,
 		setPosY,
@@ -278,6 +269,7 @@ export const useGameStore = defineStore('game', () => {
 		refillQueue,
 		setIsPlaying,
 		initQueue,
-		flatCells
+		flatCells,
+		removeGhost
 	}
 })

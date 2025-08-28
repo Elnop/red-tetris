@@ -243,7 +243,6 @@ export default (nitroApp: NitroApp) => {
 				console.error('Invalid grid data received:', { room, username, gridLength: grid?.length, color })
 				return
 			}
-			// Broadcast to other players in the room
 			socket.to(room).emit("tetris-ghost", { 
 				username, 
 				grid,

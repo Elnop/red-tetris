@@ -24,9 +24,7 @@ export function useGame() {
 		getNewDeltaTime,
 		setDropTimer,
 		startGameLoop,
-		onPlayerLost,
-		onWin,
-		onUserLeft,
+		disappear,
 		clearGameStates,
 		canPlace,
 		setSoftDrop,
@@ -35,6 +33,7 @@ export function useGame() {
 		setIsPlaying,
 		initQueue,
 		COLS,
+		removeGhost
 	} = gameStore
 	
 	const {
@@ -46,12 +45,15 @@ export function useGame() {
 		posY,
 		grid,
 		softDrop,
+		winner,
+		won,
 	} = storeToRefs(gameStore)
 
 	const {
 		initGameSocketListeners,
 		emitLeaveRoom,
-		clearGameSocketListeners
+		clearGameSocketListeners,
+		emitGameOver
 	} = useSocketEmiters()
 
 	const {
@@ -70,7 +72,7 @@ export function useGame() {
 	function start() {
 		startGame(gameLoop)
 	}
-	
+
 	const startGame = (gameLoop: () => void, seed?: number) => {
 		clearGameStates()
 		initQueue(seed)
@@ -95,16 +97,12 @@ export function useGame() {
 		}
 	}
 	
-	// Vitesse de chute en mode soft drop (1 cellule par frame, ~16.67ms à 60fps)
 	const SOFT_DROP_MS = 16.67
 	
 	const tick = (dtMs: number): void => {
-		// Vérifications initiales
 		if (!isPlaying.value || !isAlive.value || !active.value) return
 		
-		// Calcul de la vitesse actuelle
 		const currentBaseDropMs = getCurrentBaseDropSpeed()
-		// S'assurer que currentBaseDropMs est défini
 		if (currentBaseDropMs === undefined) {
 			console.warn('currentBaseDropMs is undefined, using fallback value')
 			return
@@ -112,7 +110,6 @@ export function useGame() {
 		
 		const currentSpeed = softDrop.value ? SOFT_DROP_MS : currentBaseDropMs
 		
-		// Validation de la vitesse
 		if (currentSpeed === undefined) {
 			console.warn('currentSpeed is undefined, using fallback value')
 			return
@@ -133,13 +130,10 @@ export function useGame() {
 	})
 
 	onBeforeUnmount(() => {
-		// Arrêter la boucle de jeu
 		if (gameLoopInterval.value) {
 			clearInterval(gameLoopInterval.value)
 			gameLoopInterval.value = null
 		}
-
-		// Nettoyer les écouteurs d'événements
 		window.removeEventListener('keydown', onKeyDown)
 		window.removeEventListener('keyup', onKeyUp)
 		window.removeEventListener('tetris-start', onRoomStart as EventListener)
@@ -192,6 +186,22 @@ export function useGame() {
 		}
 	}
 	
+	const onUserLeft = (username: string) => {
+		removeGhost(username)
+		console.log("TEST",roomStore.users.length)
+		if (isPlaying.value && isAlive.value && roomStore.users.length === 1 && roomStore.users[0]?.username === userStore.username) {
+			gameStore.onWin(userStore.username)
+		}
+	}
+
+	const onPlayerLost = ({ username }: { username: string }) => {
+		if (username === userStore.username) {
+			disappear()
+		} else {
+			onUserLeft(username)
+		}
+	}
+
 	const onKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'ArrowDown') setSoftDrop(false)
 	}

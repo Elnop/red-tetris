@@ -28,9 +28,7 @@ export function useSocketEmiters() {
 	}
 	
 	function emitGameOver() {
-		try {
-			socket.emit('tetris-game-over', { room: roomStore.roomId ?? 'default', username: userStore.username ?? 'me' })
-		} catch {}
+		socket.emit('tetris-game-over', { room: roomStore.roomId, username: userStore.username })
 	}
 	
 	const emitGridUpdate = (serializedGrid: string[]): void => {
