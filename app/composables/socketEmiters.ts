@@ -18,7 +18,7 @@ export function useSocketEmiters() {
 		if (!roomStore.roomId || !userStore.username) return
 		socket.emit("tetris-start", { room: roomStore.roomId, seed })
 	}
-
+	
 	function emitLeaveRoom() {
 		if (!roomStore.roomId || !userStore.username) return
 		socket.emit('leave-room', { 
@@ -26,7 +26,7 @@ export function useSocketEmiters() {
 			username: userStore.username
 		})
 	}
-
+	
 	function emitGameOver() {
 		try {
 			socket.emit('tetris-game-over', { room: roomStore.roomId ?? 'default', username: userStore.username ?? 'me' })
@@ -53,7 +53,7 @@ export function useSocketEmiters() {
 			count: count
 		})
 	}
-
+	
 	function emitJoinRoom() {
 		if (!roomStore.roomId || !userStore.username) return
 		socket.emit('join-room', { 
@@ -91,19 +91,37 @@ export function useSocketEmiters() {
 		})
 	}
 	
-	function initGameSocketListeners() {
-		
+	function initGameSocketListeners(
+		onGhost: (payload: {
+			username: string;
+			grid: string[];
+			color: string;
+		}) => void,
+		onUserLeft: (username: string) => void,
+		onPlayerLost: ({ username }: {
+			username: string;
+		}) => void,
+		addGarbageLines: (count: number) => void
+	) {
+		socket.on('tetris-ghost', onGhost)
+		socket.on('user-left', onUserLeft)
+		socket.on('player-lost', onPlayerLost)
+		socket.on('tetris-receive-lines', ({ count }) => addGarbageLines(count))
 	}
-
+	
 	function clearRoomSocketListeners() {
 		socket.off("room-users")
 		socket.off("room-leader")
 		socket.off("tetris-start")
 		socket.off("game-ended")
 	}
-
+	
 	function clearGameSocketListeners() {
-		
+		socket.off('tetris-ghost')
+		socket.off('user-left')
+		socket.off('player-lost')
+		socket.off('tetris-win')
+		socket.off('tetris-receive-lines')
 	}
 	
 	return {

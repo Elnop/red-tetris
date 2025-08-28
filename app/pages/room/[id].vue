@@ -3,15 +3,11 @@ import { ref, onMounted, onUnmounted } from "vue"
 import { useRoute } from "vue-router"
 import { useUserStore } from "~/stores/useUserStore"
 import { useGameStore } from "~/stores/useGameStore"
-import { useNuxtApp } from "nuxt/app"
-import type { TypedSocket } from "~/types/socket"
 import { useRoomStore } from "~/stores/useRoomStore"
 import { navigateTo, useSocketEmiters } from "#imports"
 
 const route = useRoute()
 const roomId = route.params.id as string
-const { $socket } = useNuxtApp()
-const socket = $socket as TypedSocket
 
 const userStore = useUserStore()
 const gameStore = useGameStore()

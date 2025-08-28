@@ -1,6 +1,4 @@
-import type { TypedSocket } from "~/types/socket"
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useNuxtApp } from 'nuxt/app'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useGameStore } from "~/stores/useGameStore"
 import { useActivePiece } from "./useActivePiece"
 import { useGhosts } from "./useGhostDisplay"
@@ -9,6 +7,7 @@ import { rotateActiveCW } from "~/utils/pieces"
 import { storeToRefs } from "pinia"
 import { useRoomStore } from "~/stores/useRoomStore"
 import { useUserStore } from "~/stores/useUserStore"
+import { useSocketEmiters } from '#imports'
 
 export function useGame() {
 	const gameStore = useGameStore()
@@ -49,10 +48,24 @@ export function useGame() {
 		softDrop,
 	} = storeToRefs(gameStore)
 
-	const { handleDrop, getCurrentBaseDropSpeed, trySpawnNextActivePiece, hardDrop, tryMoveActivePiece, getActivePieceStyle } = activePiece
+	const {
+		initGameSocketListeners,
+		emitLeaveRoom,
+		clearGameSocketListeners
+	} = useSocketEmiters()
+
+	const {
+		handleDrop,
+		getCurrentBaseDropSpeed,
+		trySpawnNextActivePiece,
+		hardDrop,
+		tryMoveActivePiece,
+		getActivePieceStyle
+	} = activePiece
+
 	const { onGhost, getGhostStyle } = ghosts
+
 	const { addGarbageLines } = board
-	const { $socket } = useNuxtApp() as unknown as { $socket: TypedSocket }
 
 	function start() {
 		startGame(gameLoop)
@@ -115,22 +128,9 @@ export function useGame() {
 		window.addEventListener('keydown', onKeyDown)
 		window.addEventListener('keyup', onKeyUp)
 		window.addEventListener('tetris-start', onRoomStart as EventListener)
-		$socket.on('tetris-ghost', onGhost)
-		$socket.on('user-left', onUserLeft)
-		$socket.on('player-lost', onPlayerLost)
-		$socket.on('tetris-win', onWin)
-		$socket.on('tetris-receive-lines', ({ count }) => addGarbageLines(count))
+		initGameSocketListeners(onGhost, onUserLeft, onPlayerLost, addGarbageLines)
 		startGameLoop(gameLoop)
 	})
-	
-	const leaveRoom = () => {
-		if ($socket && $socket.connected) {
-			$socket.emit('leave-room', { 
-				room: roomStore.roomId,
-				username: userStore.username
-			})
-		}
-	}
 
 	onBeforeUnmount(() => {
 		// Arrêter la boucle de jeu
@@ -143,20 +143,8 @@ export function useGame() {
 		window.removeEventListener('keydown', onKeyDown)
 		window.removeEventListener('keyup', onKeyUp)
 		window.removeEventListener('tetris-start', onRoomStart as EventListener)
-		
-		// Nettoyer les écouteurs Socket.IO
-		if ($socket) {
-			$socket.off('tetris-ghost', onGhost)
-			$socket.off('user-left', onUserLeft)
-			$socket.off('player-lost', onPlayerLost)
-			$socket.off('tetris-win', onWin)
-			$socket.off('tetris-receive-lines')
-			
-			// Quitter la salle
-			leaveRoom()
-		}
-		
-		// Réinitialiser l'état du jeu
+		clearGameSocketListeners()
+		emitLeaveRoom()
 		clearGameStates()
 	})
 	
