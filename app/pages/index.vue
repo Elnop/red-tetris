@@ -1,30 +1,61 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from '#app';
 import { useUserStore } from '~/stores/useUserStore';
 import { validateUsername, validateRoomName } from '~/utils/validation';
+import { useNuxtApp } from 'nuxt/app';
+import type { TypedSocket } from '~/types/socket';
 
 const userStore = useUserStore()
 const router = useRouter()
+const { $socket } = useNuxtApp()
+const socket = $socket as TypedSocket
 
 const errorMessage = ref('')
+const isLoading = ref(false)
 
-function joinHandler() {
-	const usernameError = validateUsername(userStore.username || '')
-	const roomError = validateRoomName(userStore.roomName || '')
-	
-	if (usernameError) {
-		errorMessage.value = usernameError
-		return
-	}
-	
-	if (roomError) {
-		errorMessage.value = roomError
-		return
-	}
-	
-	errorMessage.value = ''
-	router.push(`/room/${userStore.roomName}`)
+async function joinHandler() {
+  const usernameError = validateUsername(userStore.username || '')
+  const roomError = validateRoomName(userStore.roomName || '')
+  
+  if (usernameError) {
+    errorMessage.value = usernameError
+    return
+  }
+  
+  if (roomError) {
+    errorMessage.value = roomError
+    return
+  }
+  
+  errorMessage.value = ''
+  isLoading.value = true
+  
+  try {
+    // Check if username is available
+    const isAvailable = await new Promise<boolean>((resolve) => {
+      socket.emit('check-username', {
+        room: userStore.roomName,
+        username: userStore.username
+      }, (response: { available: boolean }) => {
+        resolve(response.available)
+      })
+    })
+    
+    if (isAvailable) {
+      // If username is available, navigate to the room
+      router.push(`/room/${userStore.roomName}`)
+    } else {
+      // If username is taken, generate a new one and try again
+      userStore.genUsername()
+      errorMessage.value = 'Ce pseudo est déjà pris. Un nouveau pseudo a été généré.'
+    }
+  } catch (error) {
+    console.error('Error checking username:', error)
+    errorMessage.value = 'Une erreur est survenue. Veuillez réessayer.'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 // function createHandler() {
@@ -49,7 +80,7 @@ function joinHandler() {
 			v-model="userStore.username" 
 			@input="errorMessage = ''"
 			maxlength="20"
-			placeholder="3-20 caractères alphanumériques"
+			placeholder="1-20 caractères alphanumériques"
 			/>
 			<label for="room">Room:</label>
 			<input 
@@ -57,14 +88,19 @@ function joinHandler() {
 			v-model="userStore.roomName" 
 			@input="errorMessage = ''"
 			maxlength="20"
-			placeholder="3-20 caractères alphanumériques"
+			placeholder="1-20 caractères alphanumériques"
 			/>
 			<div v-if="errorMessage" class="error-message">
 				{{ errorMessage }}
 			</div>
 		</div>
 		<div class="button-block">
-			<RTButton text="join" :onClick="joinHandler" class="rtb-btn" />
+			<RTButton 
+  :text="isLoading ? 'Chargement...' : 'join'" 
+  :onClick="joinHandler" 
+  class="rtb-btn" 
+  :disabled="isLoading"
+/>
 			<!-- <Button text="Create" :onClick="createHandler" class="rtb-btn" /> -->
 		</div>
 	</div>

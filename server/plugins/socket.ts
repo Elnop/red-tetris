@@ -134,7 +134,24 @@ export default (nitroApp: NitroApp) => {
 		}
 	}
 	
-	io.on("connection", (socket) => {		
+	io.on("connection", (socket) => {
+		socket.on("check-username", ({ room, username }, callback) => {
+			const clean = sanitizeUsername(username)
+			if (!clean) {
+				callback({ available: false })
+				return
+			}
+			
+			const state = rooms[room]
+			if (!state) {
+				callback({ available: true })
+				return
+			}
+			
+			const isTaken = state.users.some(u => u.username === clean)
+			callback({ available: !isTaken })
+		})
+		
 		socket.on("join-room", ({ room, username }) => {
 			// IMPORTANT: join the Socket.IO room
 			socket.join(room)

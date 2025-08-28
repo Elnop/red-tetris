@@ -7,6 +7,7 @@ import { useNuxtApp } from "nuxt/app"
 import type { TypedSocket } from "~/types/socket"
 import { useRoomStore } from "~/stores/useRoomStore"
 import type { UserData } from "~/types/game"
+import { navigateTo } from "#imports"
 
 const route = useRoute()
 const roomId = route.params.id as string
@@ -22,17 +23,23 @@ const gameFinished = ref(false)
 
 
 onMounted(() => {
-	const username = (userStore.username ?? '').trim()
-	if (!username) {
-		// regénère si placeholder invalide
-		userStore.genUsername()
-	}
-	
-	socket.on("room-users", (data: { users: UserData[] }) => {
-		console.log("room-users", data.users)
-		roomStore.setUsers(data.users)
-		userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
-	})
+  const username = (userStore.username ?? '').trim()
+  if (!username) {
+    // Redirect to home if no username is set
+    navigateTo('/')
+    return
+  }
+
+  // Join the room immediately since we've already validated the username
+  socket.emit("join-room", { room: roomId, username })
+  roomStore.setRoomId(roomId)
+  
+  // Setup socket listeners
+  socket.on("room-users", (data: { users: UserData[] }) => {
+    console.log("room-users", data.users)
+    roomStore.setUsers(data.users)
+    userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
+  })
 	
 	socket.on("room-leader", (data: { username: string | null }) => {
 		roomStore.setLeader(data.username)
@@ -49,11 +56,11 @@ onMounted(() => {
 		gameStore.onWin(winner)
 	})
 	
-	// Now join the room
-	if (userStore.username) {
-		socket.emit("join-room", { room: roomId, username: userStore.username })
-		roomStore.setRoomId(roomId)
-	}
+  // Error handling for socket connection
+  socket.on('connect_error', (error) => {
+    console.error('Connection error:', error)
+    navigateTo('/')
+  })
 })
 
 const leave = () => {
