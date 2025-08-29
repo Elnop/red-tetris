@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue"
 import { useRoute } from "vue-router"
+import { storeToRefs } from 'pinia'
 import { useUserStore } from "~/stores/useUserStore"
 import { useGameStore } from "~/stores/useGameStore"
 import { useRoomStore } from "~/stores/useRoomStore"
@@ -24,6 +25,8 @@ const userId = route.params.userName as string | undefined || props.userName
 const userStore = useUserStore()
 const gameStore = useGameStore()
 const roomStore = useRoomStore()
+
+const { level, linesCleared } = storeToRefs(gameStore)
 
 const isRunning = ref(false)
 const gameFinished = ref(false)
@@ -117,47 +120,57 @@ const startForRoom = () => {
 		<div class="game-wrapper">
 			<Game />
 		</div>
-		<div class="controls-panel">
-			<h2 class="controls-title">CONTROLS</h2>
-			<div class="keyboard-layout">
-				<!-- Ligne du haut - Flèches -->
-				<div class="keyboard-row">
-					<div class="key-spacer"></div>
-					<div class="key key-arrow">
-						<div class="key-icon">⬆</div>
-						<div class="key-label">Rotate</div>
-					</div>
-					<div class="key-spacer"></div>
+	</main>
+	<div class="controls-panel">
+		<div class="game-stats">
+			<div class="stat-item">
+					<span class="stat-label">LEVEL</span>
+					<span class="stat-value">{{ level }}</span>
 				</div>
+				<div class="stat-item">
+					<span class="stat-label">LINES</span>
+					<span class="stat-value">{{ linesCleared }}</span>
+				</div>
+		</div>
+		<h2 class="controls-title">CONTROLS</h2>
+		<div class="keyboard-layout">
+			<!-- Ligne du haut - Flèches -->
+			<div class="keyboard-row">
+				<div class="key-spacer"></div>
+				<div class="key key-arrow">
+					<div class="key-icon">⬆</div>
+					<div class="key-label">Rotate</div>
+				</div>
+				<div class="key-spacer"></div>
+			</div>
 
-				<!-- Ligne du milieu - Gauche/Droite -->
+			<!-- Ligne du milieu - Gauche/Droite -->
+			<div class="keyboard-row">
+				<div class="key key-arrow">
+					<div class="key-icon">⬅</div>
+					<div class="key-label">Left</div>
+				</div>
 				<div class="keyboard-row">
 					<div class="key key-arrow">
-						<div class="key-icon">⬅</div>
-						<div class="key-label">Left</div>
-					</div>
-					<div class="keyboard-row">
-						<div class="key key-arrow">
-							<div class="key-icon">⬇</div>
-							<div class="key-label">Down</div>
-						</div>
-					</div>
-					<div class="key key-arrow">
-						<div class="key-icon">➡</div>
-						<div class="key-label">Right</div>
+						<div class="key-icon">⬇</div>
+						<div class="key-label">Down</div>
 					</div>
 				</div>
+				<div class="key key-arrow">
+					<div class="key-icon">➡</div>
+					<div class="key-label">Right</div>
+				</div>
+			</div>
 
-				<!-- Barre d'espace -->
-				<div class="keyboard-row">
-					<div class="key key-ultrawide">
-						<div class="key-icon">SPACE</div>
-						<div class="key-label">Hard Drop</div>
-					</div>
+			<!-- Barre d'espace -->
+			<div class="keyboard-row">
+				<div class="key key-ultrawide">
+					<div class="key-icon">SPACE</div>
+					<div class="key-label">Hard Drop</div>
 				</div>
 			</div>
 		</div>
-	</main>
+	</div>
 </div>
 </div>
 </template>
@@ -257,9 +270,8 @@ body {
 	display: flex;
 	justify-content: space-between;
 	width: 100%;
-	max-width: 1400px;
 	margin: 0 auto;
-	padding: 0 1rem;
+	padding: 0 20px;
 	position: relative;
 	z-index: 1;
 }
@@ -383,9 +395,45 @@ body {
 	cursor: not-allowed;
 }
 
+/* Game Stats */
+.game-stats {
+	display: flex;
+	justify-content: space-around;
+	width: 100%;
+	margin-bottom: 20px;
+	background: rgba(0, 0, 0, 0.3);
+	padding: 10px 0;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.stat-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.stat-label {
+	color: #aaa;
+	font-family: 'Press Start 2P', cursive;
+	font-size: 0.6rem;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	margin-bottom: 5px;
+}
+
+.stat-value {
+	color: #ff0000;
+	font-family: 'Press Start 2P', cursive;
+	font-size: 1.5rem;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
 .controls-panel {
-	position: sticky;
+	position: absolute;
 	top: 20px;
+	right: 20px;
 	background: #1a1a1a;
 	border: 2px solid #ff0000;
 	border-radius: 8px;
@@ -514,8 +562,11 @@ body {
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;
-	gap: 2rem;
-	width: 100%;
+	width: 50%;
+	border: 2px solid #ff0000;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
 }
 
 /* Responsive adjustments */
@@ -526,15 +577,23 @@ body {
 	}
 	
 	.game-container {
-		flex-direction: column;
+		position: relative;
+		width: 100%;
+		left: 0;
+		transform: none;
+		border: none;
+		padding: 0 10px;
+		margin-top: 20px;
 		align-items: center;
 	}
 	
 	.controls-panel {
-		position: static;
+		position: relative;
 		width: 100%;
 		max-width: 300px;
-		margin-top: 2rem;
+		margin: 2rem auto 0;
+		right: auto;
+		top: auto;
 	}
 	
 	.players-panel {

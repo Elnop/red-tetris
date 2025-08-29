@@ -270,6 +270,7 @@ export const useGameStore = defineStore('game', () => {
 		setIsPlaying,
 		initQueue,
 		flatCells,
-		removeGhost
+		removeGhost,
+		linesCleared
 	}
 })

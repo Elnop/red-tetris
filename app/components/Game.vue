@@ -20,7 +20,7 @@ const { flatCells } = board
 
 <template>
 	<div v-if="!gameStore.isPlaying" class="start-screen">
-		<span style="color:#e5e7eb; font-size:20px;">En attente du chef…</span>
+		<p>En attente du chef…</p>
 	</div>
 	<div v-else class="game-area">
 		<div class="board-container">
@@ -53,22 +53,13 @@ const { flatCells } = board
 	justify-content: center;
 	align-items: center;
 	height: 90vh;
+	width: 100%;
 }
 
-.start-btn {
-	padding: 16px 32px;
-	font-size: 24px;
+.start-screen p {
+	color:#e5e7eb;
+	font-size: 30px;
 	font-weight: bold;
-	background: #8A2BE2;
-	color: white;
-	border: none;
-	border-radius: 8px;
-	cursor: pointer;
-	transition: background 0.2s;
-}
-
-.start-btn:hover {
-	background: #7B1FA2;
 }
 
 .game-area {
