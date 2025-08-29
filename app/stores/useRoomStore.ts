@@ -1,13 +1,8 @@
-import { useNuxtApp } from "nuxt/app";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { UserData } from "~/types/game"
-import type { TypedSocket } from "~/types/socket";
-import { useUserStore } from "./useUserStore";
 
 export const useRoomStore = defineStore('room', () => {
-	const { $socket } = useNuxtApp()
-	const socket = $socket as TypedSocket
 	const roomId = ref<string>("")
 	const leaderName = ref<string | null>(null)
 	const users = ref<UserData[]>([])

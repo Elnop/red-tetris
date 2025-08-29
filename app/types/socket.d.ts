@@ -13,6 +13,7 @@ declare module 'socket.io-client' {
     emit(event: 'tetris-game-over', data: { room: string; username: string }): this;
     
     // Événements reçus par le client
+    on(event: 'connect', callback: () => void): this;
     on(event: 'connect_error', callback: (error: Error) => void): this;
     on(event: 'username-taken', callback: () => void): this;
     on(event: 'room-users', callback: (data: { users: UserData[] }) => void): this;

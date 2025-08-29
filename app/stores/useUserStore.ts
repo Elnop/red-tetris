@@ -33,9 +33,12 @@ export const useUserStore = defineStore('user', () => {
 	const setColor = (color: string) => {
 		userColor.value = color
 	}
+	const setUsername = (new_username: string) => {
+		username.value = new_username
+	}
 	if (!username.value)
 		genUsername()
-	return { username, genUsername, roomName, userColor, setColor }
+	return { username, genUsername, roomName, userColor, setColor , setUsername}
 }, {
 	// @ts-ignore
 	persist: {

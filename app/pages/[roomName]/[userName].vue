@@ -6,8 +6,20 @@ import { useGameStore } from "~/stores/useGameStore"
 import { useRoomStore } from "~/stores/useRoomStore"
 import { navigateTo, useSocketEmiters } from "#imports"
 
+const props = defineProps({
+	roomName: {
+		type: String,
+		required: false
+	},
+	userName: {
+		type: String,
+		required: false
+	}
+})
+
 const route = useRoute()
-const roomId = route.params.id as string
+const roomId = route.params.roomName as string | undefined || props.roomName 
+const userId = route.params.userName as string | undefined || props.userName
 
 const userStore = useUserStore()
 const gameStore = useGameStore()
@@ -26,24 +38,32 @@ function setGameFinished(value: boolean) {
 	gameFinished.value = value
 }
 
+function exitRoom() {
+	emitLeaveRoom()
+	window.removeEventListener("beforeunload", exitRoom)
+	window.removeEventListener("pagehide", exitRoom)
+	clearRoomSocketListeners()
+}
+
 onMounted(() => {
-	const username = (userStore.username ?? '').trim()
-	if (!username) {
+	let username = (userStore.username ?? '').trim()
+	if (userId) {
+		username = userId
+	}
+	if (!username || !roomId) {
 		navigateTo('/')
 		return
 	}
+	userStore.setUsername(username)
 	roomStore.setRoomId(roomId)
 	initRoomSocketListeners(setIsRunning, setGameFinished)
 	emitJoinRoom()
-	window.addEventListener("beforeunload", emitLeaveRoom)
-	window.addEventListener("pagehide", emitLeaveRoom)
+	window.addEventListener("beforeunload", exitRoom)
+	window.addEventListener("pagehide", exitRoom)
 })
 
 onUnmounted(() => {
-	emitLeaveRoom()
-	window.removeEventListener("beforeunload", emitLeaveRoom)
-	window.removeEventListener("pagehide", emitLeaveRoom)
-	clearRoomSocketListeners()
+	exitRoom()
 })
 
 const amLeader = () => roomStore.leaderName === userStore.username
@@ -60,14 +80,14 @@ const startForRoom = () => {
 	<div class="room-container">
 		<header class="room-header">
 			<NuxtLink to="/" class="home-link">
-				<span class="pixel-arrow">◄</span> Accueil
+				<span class="pixel-arrow">◄</span> Home
 			</NuxtLink>
-			<h1 class="room-title">SALLE: <span class="room-id">{{ roomId }}</span></h1>
+			<h1 class="room-title">ROOM: <span class="room-id">{{ roomId }}</span></h1>
 		</header>
 		
 		<div class="room-content">
 			<aside class="players-panel">
-				<h2 class="panel-title">JOUEURS</h2>
+				<h2 class="panel-title">PLAYERS</h2>
 				<div class="players-list">
 					<div 
 					v-for="u in roomStore.users" 
@@ -88,19 +108,61 @@ const startForRoom = () => {
 				class="start-btn"
 				:disabled="isRunning"
 				>
-				{{ gameFinished ? 'REJOUER' : 'LANCER' }}
+				{{ gameFinished ? 'PLAY AGAIN' : 'START' }}
 			</button>
 		</div>
 	</aside>
 	
 	<main class="game-container">
-		<Game />
+		<div class="game-wrapper">
+			<Game />
+		</div>
+		<div class="controls-panel">
+			<h2 class="controls-title">CONTROLS</h2>
+			<div class="keyboard-layout">
+				<!-- Ligne du haut - Flèches -->
+				<div class="keyboard-row">
+					<div class="key-spacer"></div>
+					<div class="key key-arrow">
+						<div class="key-icon">⬆</div>
+						<div class="key-label">Rotate</div>
+					</div>
+					<div class="key-spacer"></div>
+				</div>
+
+				<!-- Ligne du milieu - Gauche/Droite -->
+				<div class="keyboard-row">
+					<div class="key key-arrow">
+						<div class="key-icon">⬅</div>
+						<div class="key-label">Left</div>
+					</div>
+					<div class="keyboard-row">
+						<div class="key key-arrow">
+							<div class="key-icon">⬇</div>
+							<div class="key-label">Down</div>
+						</div>
+					</div>
+					<div class="key key-arrow">
+						<div class="key-icon">➡</div>
+						<div class="key-label">Right</div>
+					</div>
+				</div>
+
+				<!-- Barre d'espace -->
+				<div class="keyboard-row">
+					<div class="key key-ultrawide">
+						<div class="key-icon">SPACE</div>
+						<div class="key-label">Hard Drop</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</main>
 </div>
 </div>
 </template>
 
-<style scoped>
+<style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
@@ -183,7 +245,6 @@ body {
 	text-transform: uppercase;
 	font-size: 24px;
 	margin: 20px 0;
-	text-shadow: var(--text-glow);
 	letter-spacing: 2px;
 }
 
@@ -194,9 +255,11 @@ body {
 
 .room-content {
 	display: flex;
-	max-width: 1200px;
+	justify-content: space-between;
+	width: 100%;
+	max-width: 1400px;
 	margin: 0 auto;
-	gap: 30px;
+	padding: 0 1rem;
 	position: relative;
 	z-index: 1;
 }
@@ -212,13 +275,16 @@ body {
 }
 
 .panel-title {
-	color: var(--primary-red);
-	font-size: 16px;
-	margin-bottom: 15px;
+	font-family: 'Press Start 2P', cursive;
+	color: #ff0000;
+	font-size: 0.8rem;
+	margin: 0 0 1.5rem 0;
+	padding-bottom: 0.8rem;
 	text-align: center;
 	text-transform: uppercase;
-	letter-spacing: 2px;
-	text-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
+	letter-spacing: 1px;
+	width: 100%;
+	border-bottom: 1px solid rgba(255, 0, 0, 0.3);
 }
 
 .players-list {
@@ -242,8 +308,8 @@ body {
 }
 
 .player-color {
-	width: 12px;
-	height: 12px;
+	width: 18px;
+	height: 18px;
 	background-color: var(--player-color);
 	margin-right: 10px;
 	box-shadow: 0 0 5px var(--player-color);
@@ -251,9 +317,9 @@ body {
 
 .player-name {
 	color: white;
-	font-size: 12px;
+	font-size: 18px;
 	text-transform: uppercase;
-	letter-spacing: 1px;
+	letter-spacing: 2px;
 	flex-grow: 1;
 }
 
@@ -317,18 +383,158 @@ body {
 	cursor: not-allowed;
 }
 
+.controls-panel {
+	position: sticky;
+	top: 20px;
+	background: #1a1a1a;
+	border: 2px solid #ff0000;
+	border-radius: 8px;
+	padding: 1.5rem;
+	color: white;
+	width: 280px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.controls-title {
+	font-family: 'Press Start 2P', cursive;
+	color: #ff0000;
+	font-size: 0.8rem;
+	margin: 0 0 1.5rem 0;
+	padding-bottom: 0.8rem;
+	text-align: center;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	width: 100%;
+	border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+/* Clavier stylisé */
+.keyboard-layout {
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+	width: 100%;
+}
+
+.keyboard-row {
+	display: flex;
+	justify-content: center;
+	gap: 0.8rem;
+}
+
+.key {
+	background: #2a2a2a;
+	border: 2px solid #444;
+	border-radius: 6px;
+	padding: 0.6rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.1s ease;
+	position: relative;
+	overflow: hidden;
+	cursor: pointer;
+	user-select: none;
+}
+
+.key:hover {
+	transform: translateY(-2px);
+	background: #333;
+}
+
+.key:active {
+	transform: translateY(1px);
+}
+
+.key-arrow {
+	width: 60px;
+	height: 60px;
+}
+
+.key-wide {
+	width: 120px;
+}
+
+.key-ultrawide {
+	width: 200px;
+	height: 50px;
+	background: #3a3a3a;
+}
+
+.key-ultrawide .key-icon {
+	font-family: 'Press Start 2P', cursive;
+	font-size: 0.8rem;
+	margin-bottom: 0.1rem;
+}
+
+.key-space {
+	background: #3a3a3a;
+}
+
+.key-icon {
+	font-size: 1.5rem;
+	margin-bottom: 0.2rem;
+}
+
+.key-label {
+	font-family: 'Press Start 2P', cursive;
+	font-size: 0.5rem;
+	color: #aaa;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	text-align: center;
+}
+
+.key-spacer {
+	width: 60px;
+	height: 60px;
+}
+
+/* Effet de pression sur les touches */
+.key::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(255, 255, 255, 0.1);
+	transition: top 0.1s ease;
+}
+
+.key:active::after {
+	top: 0;
+}
+
 .game-container {
-	flex-grow: 1;
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;
+	gap: 2rem;
+	width: 100%;
 }
 
 /* Responsive adjustments */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
 	.room-content {
 		flex-direction: column;
 		align-items: center;
+	}
+	
+	.game-container {
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.controls-panel {
+		position: static;
+		width: 100%;
+		max-width: 300px;
+		margin-top: 2rem;
 	}
 	
 	.players-panel {
@@ -341,21 +547,6 @@ body {
 		font-size: 20px;
 		margin: 40px 0 20px;
 	}
-}
-
-/* Pixel art decorations */
-.room-container::after {
-	content: '';
-	position: fixed;
-	top: 20px;
-	right: 20px;
-	width: 40px;
-	height: 40px;
-	background: 
-	linear-gradient(45deg, transparent 45%, var(--primary-red) 45%, var(--primary-red) 55%, transparent 55%),
-	linear-gradient(-45deg, transparent 45%, var(--primary-red) 45%, var(--primary-red) 55%, transparent 55%);
-	opacity: 0.6;
-	z-index: 0;
 }
 
 </style>

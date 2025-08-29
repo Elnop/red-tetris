@@ -5,6 +5,7 @@ import { useUserStore } from "~/stores/useUserStore";
 import { storeToRefs } from "pinia";
 import type { UserData } from "~/types/game";
 import { useGameStore } from "#imports";
+import { onMounted, onUnmounted } from "#imports";
 
 export function useSocketEmiters() {
 	const { $socket } = useNuxtApp()
@@ -13,6 +14,31 @@ export function useSocketEmiters() {
 	const userStore = useUserStore()
 	const gameStore = useGameStore()
 	const { userColor } = storeToRefs(userStore)
+	
+	const pendingEmits: (() => void)[] = [];
+	
+	function handleSocketConnect() {
+		// Exécuter tous les événements en attente
+		while (pendingEmits.length) {
+			const emitFn = pendingEmits.shift();
+			if (emitFn) emitFn();
+		}
+	}
+	
+	// S'abonner à l'événement de connexion
+	onMounted(() => {
+		if (socket) {
+			socket.on('connect', handleSocketConnect);
+		}
+	});
+	
+	// Nettoyer à la destruction
+	onUnmounted(() => {
+		if (socket) {
+			socket.off('connect', handleSocketConnect);
+		}
+		pendingEmits.length = 0;
+	});
 	
 	function emitUserNameIsTaken(): Promise<boolean> {
 		return new Promise<boolean>((resolve) => {
@@ -63,14 +89,27 @@ export function useSocketEmiters() {
 	}
 	
 	function emitJoinRoom() {
-		if (!roomStore.roomId || !userStore.username || !socket || !socket.connected) return
-		socket.emit('join-room', { 
-			room: roomStore.roomId,
-			username: userStore.username
-		})
+		console.log("emitJoinRoom", roomStore.roomId, userStore.username);
+		
+		const joinRoom = () => {
+			if (!roomStore.roomId || !userStore.username || !socket) return;
+			console.log("TEST1 - Sending join-room");
+			socket.emit('join-room', { 
+				room: roomStore.roomId,
+				username: userStore.username
+			});
+		};
+		
+		if (socket?.connected) {
+			joinRoom();
+		} else {
+			console.log("Socket not connected, adding to pending queue");
+			pendingEmits.push(joinRoom);
+		}
 	}
 	
 	function initRoomSocketListeners(setIsRunning: (value: boolean) => void, setGameFinished: (value: boolean) => void) {
+		console.log("initRoomSocketListeners")
 		socket.on("room-users", (data: { users: UserData[] }) => {
 			console.log("room-users", data.users)
 			roomStore.setUsers(data.users)
@@ -118,6 +157,7 @@ export function useSocketEmiters() {
 	}
 	
 	function clearRoomSocketListeners() {
+		console.log("clearRoomSocketListeners")
 		socket.off("room-users")
 		socket.off("room-leader")
 		socket.off("tetris-start")

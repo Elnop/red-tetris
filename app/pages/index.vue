@@ -36,7 +36,7 @@ async function joinHandler() {
 		
 		if (isAvailable) {
 			// If username is available, navigate to the room
-			router.push(`/room/${userStore.roomName}`)
+			router.push(`/${userStore.roomName}`)
 		} else {
 			// If username is taken, generate a new one and try again
 			userStore.genUsername()
