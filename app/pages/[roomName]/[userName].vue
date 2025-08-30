@@ -363,7 +363,6 @@ body {
 
 .start-btn {
 	background: linear-gradient(180deg, #ff3333 0%, #cc0000 100%);
-	border: none;
 	color: white;
 	padding: 12px 25px;
 	font-family: 'Press Start 2P', cursive;
@@ -563,7 +562,6 @@ body {
 	justify-content: center;
 	align-items: flex-start;
 	width: 50%;
-	border: 2px solid #ff0000;
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
