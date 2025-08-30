@@ -180,6 +180,9 @@ export default (nitroApp: NitroApp) => {
 				state.users.push({ username: clean, alive: !state.running, socketId: socket.id, color })
 			}
 			
+			// Send game state to the joining client
+			socket.emit("game-state", { isPlaying: state.running })
+			
 			// emit directly to the joining socket to avoid any race
 			socket.emit("room-users", { users: state.users })
 			emitLeader(room)

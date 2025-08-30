@@ -26,6 +26,7 @@ declare module 'socket.io-client' {
     on(event: 'player-lost', callback: (data: { username: string }) => void): this;
     on(event: 'tetris-receive-lines', callback: (data: { count: number }) => void): this;
     on(event: 'game-ended', callback: (data: { winner: string }) => void): this;
+    on(event: 'game-state', callback: (data: { isPlaying: boolean }) => void): this;
   }
 }
 

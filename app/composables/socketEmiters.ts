@@ -145,11 +145,17 @@ export function useSocketEmiters() {
 			color: string;
 		}) => void,
 		onUserLeft: (username: string) => void,
-		onPlayerLost: ({ username }: {
+		onPlayerLost: ({
+			username
+		}: {
 			username: string;
 		}) => void,
 		addGarbageLines: (count: number) => void
 	) {
+		const gameStore = useGameStore()
+		socket.on('game-state', ({ isPlaying }: { isPlaying: boolean }) => {
+			gameStore.setIsPlaying(isPlaying)
+		})
 		socket.on('tetris-ghost', onGhost)
 		socket.on('user-left', onUserLeft)
 		socket.on('player-lost', onPlayerLost)
@@ -170,6 +176,7 @@ export function useSocketEmiters() {
 		socket.off('player-lost')
 		socket.off('tetris-win')
 		socket.off('tetris-receive-lines')
+		socket.off('game-state')
 	}
 	
 	return {
