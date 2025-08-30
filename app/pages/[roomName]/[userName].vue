@@ -109,7 +109,7 @@ const startForRoom = () => {
 				<button 
 				@click="startForRoom" 
 				class="start-btn"
-				:disabled="isRunning"
+				:disabled="gameStore.isPlaying || gameStore.won"
 				>
 				{{ gameFinished ? 'PLAY AGAIN' : 'START' }}
 			</button>

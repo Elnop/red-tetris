@@ -35,6 +35,11 @@ const { flatCells } = board
 					<div class="winner-name" v-if="gameStore.winner">{{ gameStore.winner }} won</div>
 				</div>
 			</div>
+			<div v-else-if="!gameStore.active" class="game-over-overlay">
+				<div class="game-over-content">
+					<div>SPECTATING</div>
+				</div>
+			</div>
 			<div class="board" :style="{ '--cols': String(COLS), '--rows': String(ROWS) }">
 				<div
 				v-for="(_, idx) in flatCells"

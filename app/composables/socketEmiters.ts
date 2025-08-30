@@ -152,7 +152,6 @@ export function useSocketEmiters() {
 		}) => void,
 		addGarbageLines: (count: number) => void
 	) {
-		const gameStore = useGameStore()
 		socket.on('game-state', ({ isPlaying }: { isPlaying: boolean }) => {
 			gameStore.setIsPlaying(isPlaying)
 		})
