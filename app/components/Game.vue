@@ -20,19 +20,19 @@ const { flatCells } = board
 
 <template>
 	<div v-if="!gameStore.isPlaying" class="start-screen">
-		<p>En attente du chef…</p>
+		<p>Waiting for the host…</p>
 	</div>
 	<div v-else class="game-area">
 		<div class="board-container">
 			<div v-if="gameStore.won" class="game-over-overlay win-overlay">
 				<div class="game-over-content">
-					<div>VICTOIRE !</div>
+					<div>VICTORY!</div>
 				</div>
 			</div>
 			<div v-else-if="!gameStore.isAlive" class="game-over-overlay">
 				<div class="game-over-content">
 					<div>GAME OVER</div>
-					<div class="winner-name" v-if="gameStore.winner">{{ gameStore.winner }} a gagné</div>
+					<div class="winner-name" v-if="gameStore.winner">{{ gameStore.winner }} won</div>
 				</div>
 			</div>
 			<div class="board" :style="{ '--cols': String(COLS), '--rows': String(ROWS) }">

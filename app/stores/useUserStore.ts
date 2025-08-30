@@ -27,6 +27,7 @@ export const useUserStore = defineStore('user', () => {
 	const username = ref<string | null>(null)
 	const roomName = ref<string>("")
 	const userColor = ref<string>("#FFFFFF")
+	const globalLinesCleared = ref<number>(0)
 	const genUsername = () => {
 		username.value = generateUsername()
 	}
@@ -36,9 +37,14 @@ export const useUserStore = defineStore('user', () => {
 	const setUsername = (new_username: string) => {
 		username.value = new_username
 	}
+	const addGlobalLinesCleared = (lines: number) => {
+		globalLinesCleared.value += lines
+	}
 	if (!username.value)
 		genUsername()
-	return { username, genUsername, roomName, userColor, setColor , setUsername}
+	if (!roomName.value)
+		roomName.value = "42"
+	return { username, genUsername, roomName, userColor, setColor , setUsername, globalLinesCleared, addGlobalLinesCleared}
 }, {
 	// @ts-ignore
 	persist: {

@@ -171,6 +171,7 @@ export const useGameStore = defineStore('game', () => {
 		}
 	
 	const updateLevelInfo = (linesRemoved: number): void => {
+		userStore.addGlobalLinesCleared(linesRemoved)
 		linesCleared.value += linesRemoved
 		const newLevel = Math.floor(linesCleared.value / 10)
 		

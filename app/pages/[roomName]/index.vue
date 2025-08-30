@@ -16,7 +16,6 @@ if (!userStore.username) {
 const roomName = route.params.roomName
 const userName = route.params.userName || userStore.username
 
-console.log(userName)
 </script>
 
 <template>
