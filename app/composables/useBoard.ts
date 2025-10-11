@@ -99,8 +99,7 @@ export function useBoard() {
 	const addGarbageLines = (count: number) => {
 		if (!isAlive.value) return
 		// Décaler la grille vers le haut
-		for (let y = 0; y < ROWS - count; y++) {const flatCells = computed(() => gameStore.grid.flat())
-			// const flatGridColors = computed(() => grid.flat())
+		for (let y = 0; y < ROWS - count; y++) {
 			setLine(y, grid.value[y + count]!)
 		}
 		
