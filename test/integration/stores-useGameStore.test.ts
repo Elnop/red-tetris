@@ -61,7 +61,7 @@ describe('useGameStore', () => {
   describe('Grid Management', () => {
     it('should set grid cell correctly', () => {
       gameStore.setGridCell(5, 10, 'red')
-      expect(gameStore.grid[10][5]).toBe('red')
+      expect(gameStore.grid[10]![5]).toBe('red')
     })
 
     it('should handle invalid grid coordinates', () => {
@@ -187,30 +187,30 @@ describe('useGameStore', () => {
 
   describe('Collision Detection', () => {
     it('should detect valid placement', () => {
-      const matrix = [[1, 1], [1, 1]]
+      const matrix: (0 | 1)[][] = [[1, 1], [1, 1]]
       expect(gameStore.canPlace(matrix, 0, 0)).toBe(true)
       expect(gameStore.canPlace(matrix, 8, 18)).toBe(true)
     })
 
     it('should detect horizontal boundaries', () => {
-      const matrix = [[1, 1], [1, 1]]
+      const matrix: (0 | 1)[][] = [[1, 1], [1, 1]]
       expect(gameStore.canPlace(matrix, -1, 0)).toBe(false)
       expect(gameStore.canPlace(matrix, 9, 0)).toBe(false)
     })
 
     it('should detect bottom boundary', () => {
-      const matrix = [[1, 1], [1, 1]]
+      const matrix: (0 | 1)[][] = [[1, 1], [1, 1]]
       expect(gameStore.canPlace(matrix, 0, 19)).toBe(false)
     })
 
     it('should allow placement above the board', () => {
-      const matrix = [[1, 1], [1, 1]]
+      const matrix: (0 | 1)[][] = [[1, 1], [1, 1]]
       expect(gameStore.canPlace(matrix, 0, -1)).toBe(true)
     })
 
     it('should detect collision with existing pieces', () => {
       gameStore.setGridCell(1, 1, 'red')
-      const matrix = [[1, 1], [1, 1]]
+      const matrix: (0 | 1)[][] = [[1, 1], [1, 1]]
       expect(gameStore.canPlace(matrix, 0, 0)).toBe(false)
     })
   })
@@ -275,20 +275,22 @@ describe('useGameStore', () => {
   describe('Ghost Grid Management', () => {
     it('should update ghost grids', () => {
       const ghostData = {
-        grid: Array(20).fill(null).map(() => Array(10).fill(null)),
-        isAlive: true
+        grid: ['1', '0', '1'],
+        color: '#FF0000',
+        timestamp: Date.now()
       }
-      
+
       gameStore.updateGhostGrids('player1', ghostData)
       expect(gameStore.ghostGrids['player1']).toEqual(ghostData)
     })
 
     it('should remove ghost', () => {
       gameStore.updateGhostGrids('player1', {
-        grid: Array(20).fill(null).map(() => Array(10).fill(null)),
-        isAlive: true
+        grid: ['1', '0', '1'],
+        color: '#FF0000',
+        timestamp: Date.now()
       })
-      
+
       gameStore.removeGhost('player1')
       expect(gameStore.ghostGrids['player1']).toBeUndefined()
     })

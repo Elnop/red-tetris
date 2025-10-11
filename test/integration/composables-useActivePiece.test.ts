@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useActivePiece } from '~/composables/useActivePiece'
 import { useGameStore } from '~/stores/useGameStore'
-import type { ActivePiece } from '~/types/game'
+import type { ActivePiece } from '~/utils/pieces'
 
 // Mock dependencies
 vi.mock('pinia-plugin-persistedstate', () => ({

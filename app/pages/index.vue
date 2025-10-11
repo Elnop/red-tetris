@@ -84,13 +84,13 @@ async function joinHandler() {
 			</div>
 		</div>
 		<div class="button-block">
-			<RTButton 
-			:text="isLoading ? 'Chargement...' : 'join'" 
-			:onClick="joinHandler" 
-			class="rtb-btn" 
+			<button
+			@click="joinHandler"
+			class="rtb-btn"
 			:disabled="isLoading"
-			/>
-			<!-- <Button text="Create" :onClick="createHandler" class="rtb-btn" /> -->
+			>
+				{{ isLoading ? 'Loading...' : 'JOIN' }}
+			</button>
 		</div>
 		<footer class="game-footer">
 			<div class="footer-content">
@@ -288,6 +288,11 @@ body {
 .rtb-btn:hover {
 	background: linear-gradient(90deg, #b71c1c 0%, #e53935 100%);
 	transform: scale(1.05);
+}
+.rtb-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
 }
 .game-footer {
 	position: absolute;

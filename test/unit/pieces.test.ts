@@ -193,9 +193,9 @@ describe('Pieces Utils', () => {
         name: 'T' as PieceName,
         color: '#8A2BE2',
         rotIndex: 0,
-        matrix: PIECES.T.rotations[0]
+        matrix: PIECES.T.rotations[0]!
       }
-      
+
       const rotated = rotateActiveCW(piece)
       
       expect(rotated.name).toBe('T')
@@ -212,9 +212,9 @@ describe('Pieces Utils', () => {
         name: 'T' as PieceName,
         color: '#8A2BE2',
         rotIndex: lastRotationIndex,
-        matrix: tPiece.rotations[lastRotationIndex]
+        matrix: tPiece.rotations[lastRotationIndex]!
       }
-      
+
       const rotated = rotateActiveCW(piece)
       
       expect(rotated.rotIndex).toBe(0)

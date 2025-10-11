@@ -190,9 +190,9 @@ describe('useGhosts', () => {
       ghosts.onGhost(payload)
       
       expect(gameStore.ghostGrids['otherPlayer']).toBeDefined()
-      expect(gameStore.ghostGrids['otherPlayer'].grid).toEqual(['1', '0', '1'])
-      expect(gameStore.ghostGrids['otherPlayer'].color).toBe('#0000FF')
-      expect(gameStore.ghostGrids['otherPlayer'].timestamp).toBeDefined()
+      expect(gameStore.ghostGrids['otherPlayer']!.grid).toEqual(['1', '0', '1'])
+      expect(gameStore.ghostGrids['otherPlayer']!.color).toBe('#0000FF')
+      expect(gameStore.ghostGrids['otherPlayer']!.timestamp).toBeDefined()
     })
 
     it('should ignore ghost payload from own player', () => {
@@ -219,8 +219,8 @@ describe('useGhosts', () => {
       }
       
       ghosts.onGhost(payload)
-      
-      expect(gameStore.ghostGrids['otherPlayer'].color).toBe('#888')
+
+      expect(gameStore.ghostGrids['otherPlayer']!.color).toBe('#888')
     })
 
     it('should update existing ghost data', () => {
@@ -242,8 +242,8 @@ describe('useGhosts', () => {
       ghosts.onGhost(payload2)
       
       // Should have updated data from second payload
-      expect(gameStore.ghostGrids['otherPlayer'].grid).toEqual(['0', '1', '0'])
-      expect(gameStore.ghostGrids['otherPlayer'].color).toBe('#00FF00')
+      expect(gameStore.ghostGrids['otherPlayer']!.grid).toEqual(['0', '1', '0'])
+      expect(gameStore.ghostGrids['otherPlayer']!.color).toBe('#00FF00')
     })
   })
 

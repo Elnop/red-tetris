@@ -303,8 +303,8 @@ describe('useSocketEmiters', () => {
       userStore.username = 'testuser'
       
       // Get the room-users handler
-      const roomUsersCall = mockSocket.on.mock.calls.find(call => call[0] === 'room-users')
-      const roomUsersHandler = roomUsersCall[1]
+      const roomUsersCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'room-users')
+      const roomUsersHandler = roomUsersCall![1]
       
       const usersData = [
         { username: 'testuser', color: '#FF0000', isAlive: true },
@@ -321,8 +321,8 @@ describe('useSocketEmiters', () => {
       const setLeaderSpy = vi.spyOn(roomStore, 'setLeader')
       
       // Get the room-leader handler
-      const roomLeaderCall = mockSocket.on.mock.calls.find(call => call[0] === 'room-leader')
-      const roomLeaderHandler = roomLeaderCall[1]
+      const roomLeaderCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'room-leader')
+      const roomLeaderHandler = roomLeaderCall![1]
       
       roomLeaderHandler({ username: 'leader1' })
       
@@ -337,8 +337,8 @@ describe('useSocketEmiters', () => {
       vi.clearAllMocks()
       socketEmiters.initRoomSocketListeners(setIsRunning, setGameFinished)
       
-      const tetrisStartCall = mockSocket.on.mock.calls.find(call => call[0] === 'tetris-start')
-      const tetrisStartHandler = tetrisStartCall[1]
+      const tetrisStartCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'tetris-start')
+      const tetrisStartHandler = tetrisStartCall![1]
       
       const customEventSpy = vi.spyOn(window, 'dispatchEvent')
       
@@ -361,8 +361,8 @@ describe('useSocketEmiters', () => {
       vi.clearAllMocks()
       socketEmiters.initRoomSocketListeners(setIsRunning, setGameFinished)
       
-      const gameEndedCall = mockSocket.on.mock.calls.find(call => call[0] === 'game-ended')
-      const gameEndedHandler = gameEndedCall[1]
+      const gameEndedCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'game-ended')
+      const gameEndedHandler = gameEndedCall![1]
       
       const onWinSpy = vi.spyOn(gameStore, 'onWin')
       
@@ -374,8 +374,8 @@ describe('useSocketEmiters', () => {
     })
 
     it('should handle connect_error event', () => {
-      const connectErrorCall = mockSocket.on.mock.calls.find(call => call[0] === 'connect_error')
-      const connectErrorHandler = connectErrorCall[1]
+      const connectErrorCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'connect_error')
+      const connectErrorHandler = connectErrorCall![1]
       
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       
@@ -397,8 +397,8 @@ describe('useSocketEmiters', () => {
       
       socketEmiters.initGameSocketListeners(onGhost, onUserLeft, onPlayerLost, addGarbageLines)
       
-      const gameStateCall = mockSocket.on.mock.calls.find(call => call[0] === 'game-state')
-      const gameStateHandler = gameStateCall[1]
+      const gameStateCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'game-state')
+      const gameStateHandler = gameStateCall![1]
       
       const setIsPlayingSpy = vi.spyOn(gameStore, 'setIsPlaying')
       
@@ -415,8 +415,8 @@ describe('useSocketEmiters', () => {
       
       socketEmiters.initGameSocketListeners(onGhost, onUserLeft, onPlayerLost, addGarbageLines)
       
-      const receiveLinesCall = mockSocket.on.mock.calls.find(call => call[0] === 'tetris-receive-lines')
-      const receiveLinesHandler = receiveLinesCall[1]
+      const receiveLinesCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'tetris-receive-lines')
+      const receiveLinesHandler = receiveLinesCall![1]
       
       receiveLinesHandler({ count: 4 })
       
@@ -438,7 +438,7 @@ describe('useSocketEmiters', () => {
     it('should handle user color fallback', () => {
       roomStore.setRoomId('game-room')
       userStore.username = 'player1'
-      userStore.userColor = null
+      userStore.userColor = ''
       const gridData = ['1', '0', '1']
       
       socketEmiters.emitGridUpdate(gridData)

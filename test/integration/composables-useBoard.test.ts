@@ -130,9 +130,9 @@ describe('useBoard', () => {
       board.removeLine(0)
       
       // Row 0 should now be empty (new line added at top)
-      expect(gameStore.grid[0].every(cell => cell === null)).toBe(true)
+      expect(gameStore.grid[0]!.every(cell => cell === null)).toBe(true)
       // Row 1 should now contain what was in row 1 originally
-      expect(gameStore.grid[1][0]).toBe('blue')
+      expect(gameStore.grid[1]![0]).toBe('blue')
     })
 
     it('should maintain grid size after removal', () => {
@@ -159,8 +159,8 @@ describe('useBoard', () => {
       board.clearLines()
       
       // Both lines should be cleared
-      expect(gameStore.grid[18].every(cell => cell === null)).toBe(true)
-      expect(gameStore.grid[19].every(cell => cell === null)).toBe(true)
+      expect(gameStore.grid[18]!.every(cell => cell === null)).toBe(true)
+      expect(gameStore.grid[19]!.every(cell => cell === null)).toBe(true)
     })
 
     it('should not clear white lines', () => {
@@ -172,7 +172,7 @@ describe('useBoard', () => {
       board.clearLines()
       
       // White line should remain
-      expect(gameStore.grid[19].every(cell => cell === '#FFFFFF')).toBe(true)
+      expect(gameStore.grid[19]!.every(cell => cell === '#FFFFFF')).toBe(true)
       expect(mockSocketEmitters.emitLines).not.toHaveBeenCalled()
     })
 
@@ -206,10 +206,10 @@ describe('useBoard', () => {
       
       board.mergeActiveToGrid()
       
-      expect(gameStore.grid[0][0]).toBe('yellow')
-      expect(gameStore.grid[0][1]).toBe('yellow')
-      expect(gameStore.grid[1][0]).toBe('yellow')
-      expect(gameStore.grid[1][1]).toBe('yellow')
+      expect(gameStore.grid[0]![0]).toBe('yellow')
+      expect(gameStore.grid[0]![1]).toBe('yellow')
+      expect(gameStore.grid[1]![0]).toBe('yellow')
+      expect(gameStore.grid[1]![1]).toBe('yellow')
     })
 
     it('should not merge when no active piece', () => {
@@ -236,8 +236,8 @@ describe('useBoard', () => {
       board.mergeActiveToGrid()
       
       // Only the parts inside the grid should be merged (positions 0 and 1)
-      expect(gameStore.grid[0][0]).toBe('cyan')
-      expect(gameStore.grid[0][1]).toBe('cyan')
+      expect(gameStore.grid[0]![0]).toBe('cyan')
+      expect(gameStore.grid[0]![1]).toBe('cyan')
       // Positions -2 and -1 are outside and shouldn't affect the grid
     })
   })
@@ -253,12 +253,12 @@ describe('useBoard', () => {
       board.addGarbageLines(2)
       
       // Original pieces should be moved up
-      expect(gameStore.grid[16][0]).toBe('red')
-      expect(gameStore.grid[17][1]).toBe('blue')
-      
+      expect(gameStore.grid[16]![0]).toBe('red')
+      expect(gameStore.grid[17]![1]).toBe('blue')
+
       // Bottom rows should be white
-      expect(gameStore.grid[18].every(cell => cell === '#FFFFFF')).toBe(true)
-      expect(gameStore.grid[19].every(cell => cell === '#FFFFFF')).toBe(true)
+      expect(gameStore.grid[18]!.every(cell => cell === '#FFFFFF')).toBe(true)
+      expect(gameStore.grid[19]!.every(cell => cell === '#FFFFFF')).toBe(true)
     })
 
     it('should not add garbage when not alive', () => {
@@ -344,7 +344,7 @@ describe('useBoard', () => {
       board.clearLines()
       
       // Just verify that lines were cleared, socket events are implementation details
-      expect(gameStore.grid[19].every(cell => cell === null)).toBe(true)
+      expect(gameStore.grid[19]!.every(cell => cell === null)).toBe(true)
     })
 
     it('should handle garbage lines without crashing', () => {

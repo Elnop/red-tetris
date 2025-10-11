@@ -12,7 +12,7 @@ vi.mock('pinia-plugin-persistedstate', () => ({
   }
 }))
 
-vi.mock('~/composables/useActivePiece', () => ({
+vi.mock('../../app/composables/useActivePiece', () => ({
   useActivePiece: vi.fn(() => ({
     handleDrop: vi.fn(),
     getCurrentBaseDropSpeed: vi.fn(() => 1000),
@@ -23,20 +23,20 @@ vi.mock('~/composables/useActivePiece', () => ({
   }))
 }))
 
-vi.mock('~/composables/useGhostDisplay', () => ({
+vi.mock('../../app/composables/useGhostDisplay', () => ({
   useGhosts: vi.fn(() => ({
     onGhost: vi.fn(),
     getGhostStyle: vi.fn(() => null)
   }))
 }))
 
-vi.mock('~/composables/useBoard', () => ({
+vi.mock('../../app/composables/useBoard', () => ({
   useBoard: vi.fn(() => ({
     addGarbageLines: vi.fn()
   }))
 }))
 
-vi.mock('~/composables/socketEmiters', () => ({
+vi.mock('../../app/composables/socketEmiters', () => ({
   useSocketEmiters: vi.fn(() => ({
     initGameSocketListeners: vi.fn(),
     emitLeaveRoom: vi.fn(),
@@ -44,6 +44,12 @@ vi.mock('~/composables/socketEmiters', () => ({
     emitGameOver: vi.fn()
   }))
 }))
+
+declare global {
+  var piniaPluginPersistedstate: {
+    localStorage: () => Record<string, unknown>
+  }
+}
 
 global.piniaPluginPersistedstate = {
   localStorage: () => ({})
@@ -85,10 +91,10 @@ describe('useGame', () => {
     })
 
     it('should return style for white penalty blocks', () => {
-      gameStore.grid[0][0] = '#FFFFFF'
-      
+      gameStore.grid[0]![0] = '#FFFFFF'
+
       const style = game.cellStyle(0) // First cell
-      
+
       expect(style).toEqual({
         background: '#FFFFFF',
         borderColor: '#FFFFFF'
@@ -96,10 +102,10 @@ describe('useGame', () => {
     })
 
     it('should return normal cell color style', () => {
-      gameStore.grid[0][1] = '#00FF00'
-      
+      gameStore.grid[0]![1] = '#00FF00'
+
       const style = game.cellStyle(1) // Second cell
-      
+
       expect(style).toEqual({
         background: '#00FF00',
         borderColor: '#00FF00'
@@ -116,10 +122,10 @@ describe('useGame', () => {
 
     it('should handle edge cells correctly', () => {
       gameStore.COLS = 10
-      gameStore.grid[1][9] = '#FFFF00' // Bottom right of second row
-      
+      gameStore.grid[1]![9] = '#FFFF00' // Bottom right of second row
+
       const style = game.cellStyle(19) // Cell at index 19 (row 1, col 9)
-      
+
       expect(style).toEqual({
         background: '#FFFF00',
         borderColor: '#FFFF00'
@@ -147,10 +153,10 @@ describe('useGame', () => {
 
     it('should handle grid state changes', () => {
       // Set up some grid state
-      gameStore.grid[5][3] = '#FF0000'
-      
+      gameStore.grid[5]![3] = '#FF0000'
+
       const style = game.cellStyle(53) // Row 5, col 3 = 5*10 + 3 = 53
-      
+
       expect(style).toEqual({
         background: '#FF0000',
         borderColor: '#FF0000'

@@ -89,8 +89,8 @@ describe('useRoomStore', () => {
   describe('Users Management', () => {
     it('should set users array correctly', () => {
       const testUsers: UserData[] = [
-        { username: 'player1', color: '#FF0000', isAlive: true },
-        { username: 'player2', color: '#00FF00', isAlive: true }
+        { username: 'player1', color: '#FF0000', alive: true },
+        { username: 'player2', color: '#00FF00', alive: true }
       ]
       
       roomStore.setUsers(testUsers)
@@ -101,12 +101,12 @@ describe('useRoomStore', () => {
 
     it('should replace users array completely', () => {
       const initialUsers: UserData[] = [
-        { username: 'player1', color: '#FF0000', isAlive: true }
+        { username: 'player1', color: '#FF0000', alive: true }
       ]
       
       const newUsers: UserData[] = [
-        { username: 'player2', color: '#00FF00', isAlive: false },
-        { username: 'player3', color: '#0000FF', isAlive: true }
+        { username: 'player2', color: '#00FF00', alive: false },
+        { username: 'player3', color: '#0000FF', alive: true }
       ]
       
       roomStore.setUsers(initialUsers)
@@ -119,7 +119,7 @@ describe('useRoomStore', () => {
 
     it('should handle empty users array', () => {
       const users: UserData[] = [
-        { username: 'player1', color: '#FF0000', isAlive: true }
+        { username: 'player1', color: '#FF0000', alive: true }
       ]
       
       roomStore.setUsers(users)
@@ -132,42 +132,42 @@ describe('useRoomStore', () => {
 
     it('should handle users with different alive states', () => {
       const mixedUsers: UserData[] = [
-        { username: 'alivePlayer', color: '#FF0000', isAlive: true },
-        { username: 'deadPlayer', color: '#00FF00', isAlive: false }
+        { username: 'alivePlayer', color: '#FF0000', alive: true },
+        { username: 'deadPlayer', color: '#00FF00', alive: false }
       ]
       
       roomStore.setUsers(mixedUsers)
       
-      expect(roomStore.users[0].isAlive).toBe(true)
-      expect(roomStore.users[1].isAlive).toBe(false)
+      expect(roomStore.users[0]!.alive).toBe(true)
+      expect(roomStore.users[1]!.alive).toBe(false)
     })
 
     it('should handle users with various color formats', () => {
       const coloredUsers: UserData[] = [
-        { username: 'player1', color: '#FF0000', isAlive: true },
-        { username: 'player2', color: 'red', isAlive: true },
-        { username: 'player3', color: '', isAlive: true }
+        { username: 'player1', color: '#FF0000', alive: true },
+        { username: 'player2', color: 'red', alive: true },
+        { username: 'player3', color: '', alive: true }
       ]
       
       roomStore.setUsers(coloredUsers)
       
-      expect(roomStore.users[0].color).toBe('#FF0000')
-      expect(roomStore.users[1].color).toBe('red')
-      expect(roomStore.users[2].color).toBe('')
+      expect(roomStore.users[0]!.color).toBe('#FF0000')
+      expect(roomStore.users[1]!.color).toBe('red')
+      expect(roomStore.users[2]!.color).toBe('')
     })
 
     it('should handle large users array', () => {
       const manyUsers: UserData[] = Array.from({ length: 100 }, (_, i) => ({
         username: `player${i}`,
         color: `#${i.toString(16).padStart(6, '0')}`,
-        isAlive: i % 2 === 0
+        alive: i % 2 === 0
       }))
       
       roomStore.setUsers(manyUsers)
       
       expect(roomStore.users).toHaveLength(100)
-      expect(roomStore.users[0].username).toBe('player0')
-      expect(roomStore.users[99].username).toBe('player99')
+      expect(roomStore.users[0]!.username).toBe('player0')
+      expect(roomStore.users[99]!.username).toBe('player99')
     })
   })
 
@@ -191,7 +191,7 @@ describe('useRoomStore', () => {
     it('should be reactive to users changes', () => {
       const initialUsers = roomStore.users
       const newUsers: UserData[] = [
-        { username: 'testUser', color: '#123456', isAlive: true }
+        { username: 'testUser', color: '#123456', alive: true }
       ]
       
       roomStore.setUsers(newUsers)
@@ -206,9 +206,9 @@ describe('useRoomStore', () => {
       const roomId = 'tetris-championship'
       const leaderName = 'grandMaster'
       const users: UserData[] = [
-        { username: 'grandMaster', color: '#FFD700', isAlive: true },
-        { username: 'challenger1', color: '#C0C0C0', isAlive: true },
-        { username: 'challenger2', color: '#CD7F32', isAlive: false }
+        { username: 'grandMaster', color: '#FFD700', alive: true },
+        { username: 'challenger1', color: '#C0C0C0', alive: true },
+        { username: 'challenger2', color: '#CD7F32', alive: false }
       ]
       
       roomStore.setRoomId(roomId)
@@ -225,8 +225,8 @@ describe('useRoomStore', () => {
       roomStore.setRoomId('active-room')
       roomStore.setLeader('player1')
       roomStore.setUsers([
-        { username: 'player1', color: '#FF0000', isAlive: true },
-        { username: 'player2', color: '#00FF00', isAlive: false }
+        { username: 'player1', color: '#FF0000', alive: true },
+        { username: 'player2', color: '#00FF00', alive: false }
       ])
       
       // Reset all values
@@ -242,18 +242,18 @@ describe('useRoomStore', () => {
 
     it('should maintain reference to users array', () => {
       const originalUsers: UserData[] = [
-        { username: 'original', color: '#000000', isAlive: true }
+        { username: 'original', color: '#000000', alive: true }
       ]
       
       roomStore.setUsers(originalUsers)
       
       // Modify the original array (this affects store since it shares the reference)
-      originalUsers.push({ username: 'added', color: '#FFFFFF', isAlive: false })
+      originalUsers.push({ username: 'added', color: '#FFFFFF', alive: false })
       
       // Store should now have both users since it shares the reference
       expect(roomStore.users).toHaveLength(2)
-      expect(roomStore.users[0].username).toBe('original')
-      expect(roomStore.users[1].username).toBe('added')
+      expect(roomStore.users[0]!.username).toBe('original')
+      expect(roomStore.users[1]!.username).toBe('added')
     })
   })
 

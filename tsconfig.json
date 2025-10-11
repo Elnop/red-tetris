@@ -8,6 +8,7 @@
     "app/**/*.ts",
     "app/**/*.vue",
     "utils/**/*.ts",
-    "server/**/*.ts"
+    "server/**/*.ts",
+    "test/**/*.ts"
   ]
 }
