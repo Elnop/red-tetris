@@ -10,7 +10,8 @@ console.warn = (...args: unknown[]) => {
   if (
     typeof message === 'string' &&
     (message.includes('onMounted is called when there is no active component instance') ||
-     message.includes('onBeforeUnmount is called when there is no active component instance'))
+     message.includes('onBeforeUnmount is called when there is no active component instance') ||
+     message.includes('onUnmounted is called when there is no active component instance'))
   ) {
     return
   }

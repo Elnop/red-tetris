@@ -7,7 +7,7 @@ import { rotateActiveCW } from "~/utils/pieces"
 import { storeToRefs } from "pinia"
 import { useRoomStore } from "~/stores/useRoomStore"
 import { useUserStore } from "~/stores/useUserStore"
-import { useSocketEmiters } from '#imports'
+import { useSocketEmiters } from './socketEmiters'
 
 export function useGame() {
 	const gameStore = useGameStore()
@@ -188,7 +188,6 @@ export function useGame() {
 	
 	const onUserLeft = (username: string) => {
 		removeGhost(username)
-		console.log("TEST",roomStore.users.length)
 		if (isPlaying.value && isAlive.value && roomStore.users.length === 1 && roomStore.users[0]?.username === userStore.username) {
 			gameStore.onWin(userStore.username)
 		}

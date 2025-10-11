@@ -1,6 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia';
 import { ref } from 'vue';
-import { useRoomStore } from './useRoomStore';
 
 
 function generateUsername() {
@@ -46,9 +45,5 @@ export const useUserStore = defineStore('user', () => {
 		roomName.value = "42"
 	return { username, genUsername, roomName, userColor, setColor , setUsername, globalLinesCleared, addGlobalLinesCleared}
 }, {
-	// @ts-ignore
-	persist: {
-		// @ts-ignore
-		storage: piniaPluginPersistedstate.localStorage(),
-	},
+	persist: true,
 })

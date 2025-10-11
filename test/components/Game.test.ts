@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { mount } from '@vue/test-utils'
 import Game from '~/components/Game.vue'
 
 // Mock all the composables and stores
@@ -87,7 +87,7 @@ describe('Game Component', () => {
     it('should render waiting screen when not playing', async () => {
       mockGameStore.isPlaying = false
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.text()).toContain('Waiting for the host…')
       expect(component.find('.start-screen').exists()).toBe(true)
@@ -97,7 +97,7 @@ describe('Game Component', () => {
     it('should render game area when playing', async () => {
       mockGameStore.isPlaying = true
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.start-screen').exists()).toBe(false)
       expect(component.find('.game-area').exists()).toBe(true)
@@ -108,7 +108,7 @@ describe('Game Component', () => {
       mockGameStore.isPlaying = true
       mockGameStore.won = true
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.win-overlay').exists()).toBe(true)
       expect(component.text()).toContain('VICTORY!')
@@ -120,7 +120,7 @@ describe('Game Component', () => {
       mockGameStore.isAlive = false
       mockGameStore.winner = 'otherPlayer'
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.game-over-overlay').exists()).toBe(true)
       expect(component.text()).toContain('GAME OVER')
@@ -133,7 +133,7 @@ describe('Game Component', () => {
       mockGameStore.COLS = 10
       mockGameStore.ROWS = 20
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.board-container').exists()).toBe(true)
       expect(component.find('.game-area').exists()).toBe(true)
@@ -145,7 +145,7 @@ describe('Game Component', () => {
         idx === 0 ? { background: 'red' } : { background: 'transparent' }
       )
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(mockGame.cellStyle).toHaveBeenCalled()
     })
@@ -154,7 +154,7 @@ describe('Game Component', () => {
       mockGameStore.isPlaying = true
       mockBoard.flatCells.value = Array(200).fill(null)
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.board-container').exists()).toBe(true)
     })
@@ -166,7 +166,7 @@ describe('Game Component', () => {
       mockGameStore.ROWS = 20
       mockGameStore.isPlaying = true
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       // Verify the component uses the store values
       expect(component.find('.game-area').exists()).toBe(true)
@@ -175,7 +175,7 @@ describe('Game Component', () => {
     it('should integrate with useGame composable', async () => {
       mockGameStore.isPlaying = true
       
-      await mountSuspended(Game)
+      mount(Game)
       
       // Verify the composable was called
       const { useGame } = await import('~/composables/useGame')
@@ -185,7 +185,7 @@ describe('Game Component', () => {
     it('should integrate with useBoard composable', async () => {
       mockGameStore.isPlaying = true
       
-      await mountSuspended(Game)
+      mount(Game)
       
       // Verify the composable was called
       const { useBoard } = await import('~/composables/useBoard')
@@ -198,7 +198,7 @@ describe('Game Component', () => {
       mockGameStore.isPlaying = true
       mockGameStore.won = true
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       const overlay = component.find('.win-overlay')
       expect(overlay.exists()).toBe(true)
@@ -211,7 +211,7 @@ describe('Game Component', () => {
       mockGameStore.isAlive = false
       mockGameStore.winner = 'someoneElse'
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       const overlay = component.find('.game-over-overlay')
       expect(overlay.exists()).toBe(true)
@@ -224,7 +224,7 @@ describe('Game Component', () => {
       mockGameStore.isAlive = true
       mockGameStore.winner = null
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.game-area').exists()).toBe(true)
       expect(component.find('.board-container').exists()).toBe(true)
@@ -233,7 +233,7 @@ describe('Game Component', () => {
 
   describe('Component Integration', () => {
     it('should properly initialize all required composables', async () => {
-      await mountSuspended(Game)
+      mount(Game)
       
       const { useGameStore } = await import('~/stores/useGameStore')
       const { useRoomStore } = await import('~/stores/useRoomStore')
@@ -254,7 +254,7 @@ describe('Game Component', () => {
       mockGameStore.ROWS = 16
       mockBoard.flatCells.value = Array(128).fill(null) // 8 * 16
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.game-area').exists()).toBe(true)
       expect(mockGameStore.COLS).toBe(8)
@@ -266,7 +266,7 @@ describe('Game Component', () => {
     it('should show correct state based on isPlaying', async () => {
       // Start with waiting state
       mockGameStore.isPlaying = false
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       expect(component.find('.start-screen').exists()).toBe(true)
       expect(component.find('.game-area').exists()).toBe(false)
@@ -278,7 +278,7 @@ describe('Game Component', () => {
     it('should have proper template structure', async () => {
       mockGameStore.isPlaying = true
       
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       
       // Check that main structural elements are present
       expect(component.find('.game-area').exists()).toBe(true)
@@ -294,7 +294,7 @@ describe('Game Component', () => {
       
       // Should not throw
       expect(async () => {
-        await mountSuspended(Game)
+        mount(Game)
       }).not.toThrow()
     })
 
@@ -303,7 +303,7 @@ describe('Game Component', () => {
       mockGameStore.isPlaying = true
       
       // Should not throw during mounting
-      const component = await mountSuspended(Game)
+      const component = mount(Game)
       expect(component).toBeTruthy()
     })
   })

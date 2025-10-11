@@ -4,8 +4,8 @@ import { useRoomStore } from "~/stores/useRoomStore";
 import { useUserStore } from "~/stores/useUserStore";
 import { storeToRefs } from "pinia";
 import type { UserData } from "~/types/game";
-import { useGameStore } from "#imports";
-import { onMounted, onUnmounted } from "#imports";
+import { useGameStore } from "~/stores/useGameStore";
+import { onMounted, onUnmounted } from "vue";
 
 export function useSocketEmiters() {
 	const { $socket } = useNuxtApp()
@@ -89,29 +89,23 @@ export function useSocketEmiters() {
 	}
 	
 	function emitJoinRoom() {
-		console.log("emitJoinRoom", roomStore.roomId, userStore.username);
-		
 		const joinRoom = () => {
 			if (!roomStore.roomId || !userStore.username || !socket) return;
-			console.log("TEST1 - Sending join-room");
-			socket.emit('join-room', { 
+			socket.emit('join-room', {
 				room: roomStore.roomId,
 				username: userStore.username
 			});
 		};
-		
+
 		if (socket?.connected) {
 			joinRoom();
 		} else {
-			console.log("Socket not connected, adding to pending queue");
 			pendingEmits.push(joinRoom);
 		}
 	}
 	
 	function initRoomSocketListeners(setIsRunning: (value: boolean) => void, setGameFinished: (value: boolean) => void) {
-		console.log("initRoomSocketListeners")
 		socket.on("room-users", (data: { users: UserData[] }) => {
-			console.log("room-users", data.users)
 			roomStore.setUsers(data.users)
 			userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
 		})
@@ -162,7 +156,6 @@ export function useSocketEmiters() {
 	}
 	
 	function clearRoomSocketListeners() {
-		console.log("clearRoomSocketListeners")
 		socket.off("room-users")
 		socket.off("room-leader")
 		socket.off("tetris-start")

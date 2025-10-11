@@ -5,7 +5,8 @@ import { storeToRefs } from 'pinia'
 import { useUserStore } from "~/stores/useUserStore"
 import { useGameStore } from "~/stores/useGameStore"
 import { useRoomStore } from "~/stores/useRoomStore"
-import { navigateTo, useSocketEmiters } from "#imports"
+import { navigateTo } from "nuxt/app"
+import { useSocketEmiters } from "~/composables/socketEmiters"
 
 const props = defineProps({
 	roomName: {

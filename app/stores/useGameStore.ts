@@ -3,7 +3,7 @@ import { computed, ref } from "vue"
 import type { BoardCell, GhostData } from "~/types/game"
 import { generateQueue, generateQueueFromSeed, toCoords, type ActivePiece } from "~/utils/pieces"
 import { useUserStore } from "./useUserStore"
-import { useRoomStore } from "#imports"
+import { useRoomStore } from "./useRoomStore"
 
 export const useGameStore = defineStore('game', () => {
 	const FPS = 60
@@ -203,7 +203,6 @@ export const useGameStore = defineStore('game', () => {
 	}
 	
 	const onWin = (winnerName: string) => {
-		console.log(winnerName)
 		if (winnerName === userStore.username)
 			won.value = true
 		isAlive.value = false

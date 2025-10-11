@@ -12,7 +12,6 @@ export function useGhosts() {
 	const createMultiGhostStyle = (ghosts: GhostData[], baseStyle: any) => {
 		const gradientStops = ghosts
 		.map((ghost, i, arr) => {
-			console.log(ghost?.color)
 			const color = ghost?.color || '#888888'
 			const pos = (i / arr.length) * 100
 			const nextPos = ((i + 1) / arr.length) * 100
