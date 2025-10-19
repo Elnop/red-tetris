@@ -306,8 +306,11 @@ export default (nitroApp: NitroApp) => {
 		// })
 	})
 	
-	// ⚠️ Lancer le serveur HTTP personnalisé
-	httpServer.listen(3001, "0.0.0.0", () => {
-		console.log("✅ Socket.IO server listening on port 3001")
-	})
+	// ⚠️ Lancer le serveur HTTP personnalisé seulement en runtime, pas pendant le build
+	// @ts-ignore
+	if (!import.meta.prerender) {
+		httpServer.listen(3001, "0.0.0.0", () => {
+			console.log("✅ Socket.IO server listening on port 3001")
+		})
+	}
 }

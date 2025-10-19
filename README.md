@@ -1,8 +1,22 @@
-# Nuxt Minimal Starter
+# Red Tetris
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Multiplayer Tetris game built with Nuxt 3, Vue 3, and Socket.IO.
 
-## Setup
+## 🐳 Quick Start with Docker (Recommended)
+
+The easiest way to run this project is using Docker:
+
+```bash
+# Build and start development server
+make build-dev
+make dev
+
+# Open http://localhost:3000 in your browser
+```
+
+For detailed Docker commands, see [DOCKER.md](./DOCKER.md) or run `make help`.
+
+## 📦 Local Setup (Without Docker)
 
 Make sure to install dependencies:
 
