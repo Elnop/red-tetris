@@ -83,22 +83,24 @@ prod: ## Run production server
 # ================================
 
 .PHONY: test
-test: ## Run tests in Docker
-	@echo "$(GREEN)Running tests...$(NC)"
+test: ## Run tests in Docker with coverage
+	@echo "$(GREEN)Building test image...$(NC)"
 	@docker rm -f $(TEST_CONTAINER) 2>/dev/null || true
-	docker build --target test -t $(IMAGE_NAME):test .
-	@echo "$(GREEN)✓ All tests passed$(NC)"
-
-.PHONY: test-coverage
-test-coverage: ## Run tests with coverage report
+	@docker build --target test -t $(IMAGE_NAME):test . > /dev/null 2>&1 && \
+	echo "$(GREEN)✓ Test image built$(NC)" || \
+	(echo "$(RED)✗ Build failed$(NC)" && exit 1)
 	@echo "$(GREEN)Running tests with coverage...$(NC)"
-	@docker rm -f $(TEST_CONTAINER) 2>/dev/null || true
-	docker run --rm \
+	@docker run --rm \
 		--name $(TEST_CONTAINER) \
-		-v $(PWD)/coverage:/app/coverage \
 		$(IMAGE_NAME):test \
 		npm run test:coverage
-	@echo "$(GREEN)✓ Coverage report generated in ./coverage$(NC)"
+	@echo ""
+	@echo "$(GREEN)✓ All tests passed$(NC)"
+	@echo "$(YELLOW)Extracting coverage report...$(NC)"
+	@docker create --name $(TEST_CONTAINER)-extract $(IMAGE_NAME):test > /dev/null 2>&1
+	@docker cp $(TEST_CONTAINER)-extract:/app/coverage ./coverage 2>/dev/null || true
+	@docker rm $(TEST_CONTAINER)-extract > /dev/null 2>&1
+	@echo "$(GREEN)✓ Coverage report available in ./coverage/index.html$(NC)"
 
 # ================================
 # Utility targets
