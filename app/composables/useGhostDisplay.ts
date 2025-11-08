@@ -60,10 +60,10 @@ export function useGhosts() {
 		
 	}	
 	const onGhost = (payload: { username: string; grid: string[]; color: string }): void => {
-		// Ignorer les données du propre fantôme du joueur
+		// Ignore the player's own ghost data
 		if (isOwnGhost(payload.username)) return
-		
-		// Créer et stocker les données du fantôme
+
+		// Create and store ghost data
 		const ghostData = createGhostData(payload.grid, payload.color)
 		updateGhostGrids(payload.username, ghostData)
 	}

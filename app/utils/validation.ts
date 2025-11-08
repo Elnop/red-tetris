@@ -1,26 +1,26 @@
-// Validation des noms d'utilisateur et de salle
+// Validation of username and room names
 export function isValidName(name: string): boolean {
-  // Vérifie que le nom n'est pas vide, ne contient que des caractères alphanumériques
-  // et a une longueur raisonnable (entre 1 et 20 caractères)
+  // Checks that the name is not empty, contains only alphanumeric characters
+  // and has a reasonable length (between 1 and 20 characters)
   return /^[a-zA-Z0-9]{1,20}$/.test(name);
 }
 
 export function validateUsername(username: string): string | null {
   if (!username || username.trim() === '') {
-    return 'Le nom d\'utilisateur ne peut pas être vide';
+    return 'Username cannot be empty';
   }
   if (!isValidName(username)) {
-    return 'Le nom d\'utilisateur ne peut contenir que des lettres et des chiffres (max 20 caractères)';
+    return 'Username can only contain letters and numbers (max 20 characters)';
   }
   return null;
 }
 
 export function validateRoomName(roomName: string): string | null {
   if (!roomName || roomName.trim() === '') {
-    return 'Le nom de la salle ne peut pas être vide';
+    return 'Room name cannot be empty';
   }
   if (!isValidName(roomName)) {
-    return 'Le nom de la salle ne peut contenir que des lettres et des chiffres (max 20 caractères)';
+    return 'Room name can only contain letters and numbers (max 20 characters)';
   }
   return null;
 }

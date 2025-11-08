@@ -135,7 +135,7 @@ const startForRoom = () => {
 		</div>
 		<h2 class="controls-title">CONTROLS</h2>
 		<div class="keyboard-layout">
-			<!-- Ligne du haut - Flèches -->
+			<!-- Top row - Arrow keys -->
 			<div class="keyboard-row">
 				<div class="key-spacer"></div>
 				<div class="key key-arrow">
@@ -145,7 +145,7 @@ const startForRoom = () => {
 				<div class="key-spacer"></div>
 			</div>
 
-			<!-- Ligne du milieu - Gauche/Droite -->
+			<!-- Middle row - Left/Right -->
 			<div class="keyboard-row">
 				<div class="key key-arrow">
 					<div class="key-icon">⬅</div>
@@ -163,7 +163,7 @@ const startForRoom = () => {
 				</div>
 			</div>
 
-			<!-- Barre d'espace -->
+			<!-- Space bar -->
 			<div class="keyboard-row">
 				<div class="key key-ultrawide">
 					<div class="key-icon">SPACE</div>
@@ -459,7 +459,7 @@ body {
 	border-bottom: 1px solid rgba(255, 0, 0, 0.3);
 }
 
-/* Clavier stylisé */
+/* Styled keyboard */
 .keyboard-layout {
 	display: flex;
 	flex-direction: column;
@@ -542,7 +542,7 @@ body {
 	height: 60px;
 }
 
-/* Effet de pression sur les touches */
+/* Key press effect */
 .key::after {
 	content: '';
 	position: absolute;

@@ -3,31 +3,31 @@ import { toNodeListener } from "h3"
 import { createServer } from "http"
 import type { NitroApp } from "nitropack"
 
-// Palette de couleurs vives et bien distinctes
+// Bright and well-distinct color palette
 const PLAYER_COLORS = [
-  '#FF6B6B', // Rouge vif
+  '#FF6B6B', // Bright red
   '#4ECDC4', // Turquoise
-  '#FED766', // Jaune
+  '#FED766', // Yellow
   '#FF9F1C', // Orange
-  '#2EC4B6', // Vert menthe
-  '#E71D36', // Rouge vif
-  '#41B3A3', // Vert émeraude
-  '#FF6B6B', // Rouge clair
-  '#4CC9F0', // Bleu ciel
-  '#7209B7', // Violet
-  '#3A86FF', // Bleu vif
-  '#FF006E', // Rose vif
-  '#8338EC', // Violet électrique
-  '#FFBE0B', // Jaune or
-  '#FB5607', // Orange vif
-  '#3A86FF', // Bleu royal
-  '#FF006E', // Rose fuchsia
-  '#3A0CA3', // Bleu foncé
-  '#4CC9F0', // Bleu clair
-  '#7209B7'  // Violet foncé
+  '#2EC4B6', // Mint green
+  '#E71D36', // Bright red
+  '#41B3A3', // Emerald green
+  '#FF6B6B', // Light red
+  '#4CC9F0', // Sky blue
+  '#7209B7', // Purple
+  '#3A86FF', // Bright blue
+  '#FF006E', // Bright pink
+  '#8338EC', // Electric purple
+  '#FFBE0B', // Golden yellow
+  '#FB5607', // Bright orange
+  '#3A86FF', // Royal blue
+  '#FF006E', // Fuchsia pink
+  '#3A0CA3', // Dark blue
+  '#4CC9F0', // Light blue
+  '#7209B7'  // Dark purple
 ]
 
-// Mélanger le tableau de couleurs pour une meilleure répartition
+// Shuffle the color array for better distribution
 const shuffleArray = (array: any[]) => {
   const newArray = [...array]
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -51,13 +51,13 @@ type RoomState = {
 }
 
 export default (nitroApp: NitroApp) => {
-	// Transformer H3 en listener Node
+	// Transform H3 into Node listener
 	const listener = toNodeListener(nitroApp.h3App)
-	
-	// Créer un vrai serveur HTTP Node
+
+	// Create a real Node HTTP server
 	const httpServer = createServer(listener)
-	
-	// Brancher socket.io dessus
+
+	// Connect socket.io to it
 	const io = new Server(httpServer, {
 		cors: {
 			origin: "*",
@@ -102,34 +102,34 @@ export default (nitroApp: NitroApp) => {
 	}
 	
 	const removeUser = (room: string, username: string) => {
-		console.log(`[REMOVE-USER] Tentative de suppression de ${username} de la salle ${room}`)
+		console.log(`[REMOVE-USER] Attempting to remove ${username} from room ${room}`)
 		const state = rooms[room]
 		if (!state) {
-			console.log(`[REMOVE-USER] Échec: la salle ${room} n'existe pas`)
+			console.log(`[REMOVE-USER] Failed: room ${room} does not exist`)
 			return
 		}
-		
+
 		const before = state.users.length
 		state.users = state.users.filter((u) => {
 			const shouldKeep = u.username !== username
 			if (!shouldKeep) {
-				console.log(`[REMOVE-USER] Suppression de l'utilisateur: ${u.username} (${u.socketId})`)
+				console.log(`[REMOVE-USER] Removing user: ${u.username} (${u.socketId})`)
 			}
 			return shouldKeep
 		})
-		
+
 		cleanRoom(room)
-		
+
 		if (state.users.length !== before) {
-			console.log(`[REMOVE-USER] Notification de la déconnexion de ${username} à la salle ${room}`)
+			console.log(`[REMOVE-USER] Notifying disconnection of ${username} in room ${room}`)
 			io.to(room).emit("user-left", username)
 			broadcastUsers(room)
 		} else {
-			console.log(`[REMOVE-USER] Aucun utilisateur supprimé (${username} non trouvé)`)
+			console.log(`[REMOVE-USER] No user removed (${username} not found)`)
 		}
-		
+
 		if (state.users.length === 0) {
-			console.log(`[REMOVE-USER] Suppression de la salle ${room} car elle est vide`)
+			console.log(`[REMOVE-USER] Deleting room ${room} because it is empty`)
 			delete rooms[room]
 		}
 	}
@@ -161,21 +161,21 @@ export default (nitroApp: NitroApp) => {
 			
 			const clean = sanitizeUsername(username)
 			if (!clean) return
-			
-			// mémoriser l'appartenance
+
+			// Remember the membership
 			memberBySocket.set(socket.id, { room, username: clean })
 			if (!state.users.find(u => u.username === clean)) {
-				// Créer une copie des couleurs disponibles
+				// Create a copy of available colors
 				const availableColors = [...PLAYER_COLORS]
-				
-				// Retirer les couleurs déjà utilisées dans la salle
+
+				// Remove colors already used in the room
 				const usedColors = new Set(state.users.map(user => user.color))
 				const remainingColors = availableColors.filter(color => !usedColors.has(color))
-				
-				// Si on a épuisé toutes les couleurs uniques, on réinitialise avec toutes les couleurs
+
+				// If all unique colors are exhausted, reset with all colors
 				const colorsToUse = remainingColors.length > 0 ? remainingColors : [...PLAYER_COLORS]
-				
-				// Prendre une couleur aléatoire parmi celles disponibles
+
+				// Pick a random color from those available
 				const color = shuffleArray(colorsToUse)[Math.floor(Math.random() * colorsToUse.length)] || '#000000'
 				state.users.push({ username: clean, alive: !state.running, socketId: socket.id, color })
 			}
@@ -193,54 +193,54 @@ export default (nitroApp: NitroApp) => {
 		})
 		
 		socket.on("leave-room", ({ room, username }, callback) => {
-			console.log(`[LEAVE-ROOM] Début - Room: ${room}, Username: ${username}, Socket ID: ${socket.id}`)
-			
-			// Vérifier si l'utilisateur est bien dans la salle
+			console.log(`[LEAVE-ROOM] Start - Room: ${room}, Username: ${username}, Socket ID: ${socket.id}`)
+
+			// Check if the user is in the room
 			const currentRoom = rooms[room]
 			if (!currentRoom) {
-				console.log(`[LEAVE-ROOM] La salle ${room} n'existe pas`)
+				console.log(`[LEAVE-ROOM] Room ${room} does not exist`)
 				callback?.({ success: false, error: 'Room does not exist' })
 				return
 			}
-			
-			// Retirer l'utilisateur de la salle
+
+			// Remove the user from the room
 			socket.leave(room)
 			memberBySocket.delete(socket.id)
-			
-			// Supprimer l'utilisateur de la liste des utilisateurs
+
+			// Remove the user from the user list
 			const userIndex = currentRoom.users.findIndex(u => u.username === username)
 			if (userIndex !== -1) {
 				currentRoom.users.splice(userIndex, 1)
-				console.log(`[LEAVE-ROOM] Utilisateur ${username} retiré de la salle ${room}`)
+				console.log(`[LEAVE-ROOM] User ${username} removed from room ${room}`)
 			}
-			
-			// Notifier les autres utilisateurs
+
+			// Notify other users
 			io.to(room).emit("user-left", username)
 			broadcastUsers(room)
-			
-			// Nettoyer la salle si elle est vide
+
+			// Clean up the room if empty
 			if (currentRoom.users.length === 0) {
-				console.log(`[LEAVE-ROOM] Suppression de la salle ${room} car elle est vide`)
+				console.log(`[LEAVE-ROOM] Deleting room ${room} because it is empty`)
 				delete rooms[room]
 			}
-			
-			console.log(`[LEAVE-ROUN] Fin - Utilisateur ${username} a quitté la salle ${room}`)
+
+			console.log(`[LEAVE-ROUN] End - User ${username} left room ${room}`)
 			callback?.({ success: true })
 		})
 		
-		// Lancer la partie: payload { room, seed }
+		// Start the game: payload { room, seed }
 		socket.on("tetris-start", ({ room, seed }: { room: string; seed: number }) => {
 			const state = rooms[room]
 			if (!state) return
 			state.running = true
 			state.lastSeed = seed
-			// Marquer tous les joueurs comme vivants
+			// Mark all players as alive
 			for (const user of state.users) user.alive = true
-			broadcastUsers(room) // Envoyer la liste mise à jour
+			broadcastUsers(room) // Send updated list
 			io.to(room).emit("tetris-start", { seed })
 		})
-		
-		// Relayer les grilles: payload { room, username, grid }
+
+		// Relay grids: payload { room, username, grid }
 		socket.on("tetris-grid", ({ room, username, grid, color }: { room: string; username: string; grid: string[], color: string }) => {
 			if (!room || !username || !grid || !Array.isArray(grid)) {
 				console.error('Invalid grid data received:', { room, username, gridLength: grid?.length, color })
@@ -253,33 +253,33 @@ export default (nitroApp: NitroApp) => {
 			})
 		})
 		
-		// Envoyer des lignes aux autres
+		// Send lines to others
 		socket.on('tetris-send-lines', ({ room, count }: { room: string; count: number }) => {
 			socket.to(room).emit('tetris-receive-lines', { count })
 		})
-		
-		// Un joueur a perdu
+
+		// A player has lost
 		socket.on("tetris-game-over", ({ room, username }) => {
 			const state = rooms[room]
 			if (!state) return
-			
+
 			const user = state.users.find(u => u.username === username)
 			if (user) user.alive = false
-			
-			// Notifier tout le monde que le joueur a perdu
+
+			// Notify everyone that the player lost
 			io.to(room).emit("player-lost", { username })
-			broadcastUsers(room) // Mettre à jour la liste des joueurs
-			
-			// Vérifier s'il y a un gagnant
+			broadcastUsers(room) // Update player list
+
+			// Check if there is a winner
 			const alivePlayers = state.users.filter(u => u.alive)
 			if (state.running && state.users.length > 1 && alivePlayers.length === 1) {
 				const winner = alivePlayers[0]
 				if (winner) {
-					// Notifier le gagnant
+					// Notify the winner
 					io.to(winner.socketId).emit("tetris-win")
-					// Notifier les autres joueurs
+					// Notify other players
 					socket.to(room).emit("player-lost", { username: winner.username })
-					// Notifier tout le monde de la fin de la partie avec le gagnant
+					// Notify everyone of game end with winner
 					state.running = false
 					io.to(room).emit("game-ended", { winner: winner.username })
 				}
@@ -306,7 +306,7 @@ export default (nitroApp: NitroApp) => {
 		// })
 	})
 	
-	// ⚠️ Lancer le serveur HTTP personnalisé seulement en runtime, pas pendant le build
+	// ⚠️ Start the custom HTTP server only at runtime, not during build
 	// @ts-ignore
 	if (!import.meta.prerender) {
 		httpServer.listen(3001, "0.0.0.0", () => {

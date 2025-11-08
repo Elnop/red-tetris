@@ -5,7 +5,7 @@ import { useUserStore } from '~/stores/useUserStore'
 import { useRoomStore } from '~/stores/useRoomStore'
 import type { ActivePiece } from '~/utils/pieces'
 
-// Mock des stores dépendants
+// Mock dependent stores
 vi.mock('~/stores/useUserStore', () => ({
   useUserStore: vi.fn(() => ({
     username: 'testuser',

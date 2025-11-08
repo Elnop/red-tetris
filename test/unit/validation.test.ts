@@ -48,12 +48,12 @@ describe('Validation Utils', () => {
     })
 
     it('should return error message for empty username', () => {
-      expect(validateUsername('')).toBe('Le nom d\'utilisateur ne peut pas être vide')
-      expect(validateUsername('   ')).toBe('Le nom d\'utilisateur ne peut pas être vide')
+      expect(validateUsername('')).toBe('Username cannot be empty')
+      expect(validateUsername('   ')).toBe('Username cannot be empty')
     })
 
     it('should return error message for invalid characters', () => {
-      const errorMessage = 'Le nom d\'utilisateur ne peut contenir que des lettres et des chiffres (max 20 caractères)'
+      const errorMessage = 'Username can only contain letters and numbers (max 20 characters)'
       expect(validateUsername('user-name')).toBe(errorMessage)
       expect(validateUsername('user@domain')).toBe(errorMessage)
       expect(validateUsername('user name')).toBe(errorMessage)
@@ -62,19 +62,19 @@ describe('Validation Utils', () => {
 
     it('should return error message for names too long', () => {
       const longName = 'a'.repeat(21)
-      const errorMessage = 'Le nom d\'utilisateur ne peut contenir que des lettres et des chiffres (max 20 caractères)'
+      const errorMessage = 'Username can only contain letters and numbers (max 20 characters)'
       expect(validateUsername(longName)).toBe(errorMessage)
     })
 
     it('should handle null and undefined inputs', () => {
       // @ts-expect-error Testing invalid input
-      expect(validateUsername(null)).toBe('Le nom d\'utilisateur ne peut pas être vide')
+      expect(validateUsername(null)).toBe('Username cannot be empty')
       // @ts-expect-error Testing invalid input
-      expect(validateUsername(undefined)).toBe('Le nom d\'utilisateur ne peut pas être vide')
+      expect(validateUsername(undefined)).toBe('Username cannot be empty')
     })
 
     it('should trim whitespace before validation', () => {
-      expect(validateUsername('  valid123  ')).toBe('Le nom d\'utilisateur ne peut contenir que des lettres et des chiffres (max 20 caractères)')
+      expect(validateUsername('  valid123  ')).toBe('Username can only contain letters and numbers (max 20 characters)')
     })
   })
 
@@ -87,12 +87,12 @@ describe('Validation Utils', () => {
     })
 
     it('should return error message for empty room name', () => {
-      expect(validateRoomName('')).toBe('Le nom de la salle ne peut pas être vide')
-      expect(validateRoomName('   ')).toBe('Le nom de la salle ne peut pas être vide')
+      expect(validateRoomName('')).toBe('Room name cannot be empty')
+      expect(validateRoomName('   ')).toBe('Room name cannot be empty')
     })
 
     it('should return error message for invalid characters', () => {
-      const errorMessage = 'Le nom de la salle ne peut contenir que des lettres et des chiffres (max 20 caractères)'
+      const errorMessage = 'Room name can only contain letters and numbers (max 20 characters)'
       expect(validateRoomName('room-1')).toBe(errorMessage)
       expect(validateRoomName('room@lobby')).toBe(errorMessage)
       expect(validateRoomName('room name')).toBe(errorMessage)
@@ -101,15 +101,15 @@ describe('Validation Utils', () => {
 
     it('should return error message for names too long', () => {
       const longName = 'a'.repeat(21)
-      const errorMessage = 'Le nom de la salle ne peut contenir que des lettres et des chiffres (max 20 caractères)'
+      const errorMessage = 'Room name can only contain letters and numbers (max 20 characters)'
       expect(validateRoomName(longName)).toBe(errorMessage)
     })
 
     it('should handle null and undefined inputs', () => {
       // @ts-expect-error Testing invalid input
-      expect(validateRoomName(null)).toBe('Le nom de la salle ne peut pas être vide')
+      expect(validateRoomName(null)).toBe('Room name cannot be empty')
       // @ts-expect-error Testing invalid input
-      expect(validateRoomName(undefined)).toBe('Le nom de la salle ne peut pas être vide')
+      expect(validateRoomName(undefined)).toBe('Room name cannot be empty')
     })
 
     it('should have different error messages than username validation', () => {

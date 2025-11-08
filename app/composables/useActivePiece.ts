@@ -41,10 +41,10 @@ export function useActivePiece() {
 	} = board
 
 	const LEVEL_SPEEDS = [
-		1000, 850, 700, 600, 500, 400, 350, 300, 250, 200,  // Niveaux 0-9
-		180, 160, 140, 120, 100, 90, 80, 70, 60, 50,        // Niveaux 10-19
-		40, 35, 30, 25, 20, 18, 16, 14, 12, 10,             // Niveaux 20-29
-		8                                                    // Niveau 30+
+		1000, 850, 700, 600, 500, 400, 350, 300, 250, 200,  // Levels 0-9
+		180, 160, 140, 120, 100, 90, 80, 70, 60, 50,        // Levels 10-19
+		40, 35, 30, 25, 20, 18, 16, 14, 12, 10,             // Levels 20-29
+		8                                                    // Level 30+
 	]
 
 	const activeIndexes = computed(() => {
@@ -92,10 +92,10 @@ export function useActivePiece() {
 	}
 
 	const getCurrentBaseDropSpeed = () => {
-		if (!isPlaying.value) return 1000 // Valeur par défaut
-		
-		// Utiliser la table de vitesse officielle de Tetris NES
-		// Pour les niveaux au-delà de 29, on utilise la même vitesse que le niveau 29
+		if (!isPlaying.value) return 1000 // Default value
+
+		// Use the official Tetris NES speed table
+		// For levels beyond 29, use the same speed as level 29
 		const effectiveLevel = Math.min(level.value, 29)
 		return LEVEL_SPEEDS[effectiveLevel] || LEVEL_SPEEDS[LEVEL_SPEEDS.length - 1]
 	}

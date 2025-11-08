@@ -189,7 +189,7 @@ export const useGameStore = defineStore('game', () => {
 			const py = y + dy
 			if (px < 0 || px >= COLS) return false
 			if (py >= ROWS) return false
-			if (py < 0) continue // au-dessus du plateau: autorisé
+			if (py < 0) continue // above the board: allowed
 			if (grid.value[py]![px]) return false
 		}
 		return true

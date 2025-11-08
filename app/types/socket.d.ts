@@ -3,7 +3,7 @@ import type { UserData } from './game';
 
 declare module 'socket.io-client' {
   interface Socket {
-    // Événements émis par le client
+    // Events emitted by the client
     emit(event: 'check-username', data: { room: string; username: string }, callback: (response: { available: boolean }) => void): this;
     emit(event: 'join-room', data: { room: string; username: string }): this;
     emit(event: 'leave-room', data: { room: string; username: string }): this;
@@ -11,8 +11,8 @@ declare module 'socket.io-client' {
     emit(event: 'tetris-grid', data: { room: string; username: string; grid: string[]; color: string }): this;
     emit(event: 'tetris-send-lines', data: { room: string; count: number }): this;
     emit(event: 'tetris-game-over', data: { room: string; username: string }): this;
-    
-    // Événements reçus par le client
+
+    // Events received by the client
     on(event: 'connect', callback: () => void): this;
     on(event: 'connect_error', callback: (error: Error) => void): this;
     on(event: 'username-taken', callback: () => void): this;

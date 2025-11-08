@@ -93,7 +93,7 @@ export function useGame() {
 		try {
 			tick(dt)
 		} catch (error) {
-			console.error('Erreur dans la boucle de jeu:', error)
+			console.error('Error in game loop:', error)
 		}
 	}
 	
@@ -158,7 +158,7 @@ export function useGame() {
 			case 'ArrowDown':
 			e.preventDefault()
 			if (!softDrop.value) {
-				setDropTimer(0) // Réinitialiser le timer quand on commence le soft drop
+				setDropTimer(0) // Reset timer when starting soft drop
 			}
 			setSoftDrop(true)
 			break

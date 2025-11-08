@@ -40,11 +40,11 @@ async function joinHandler() {
 		} else {
 			// If username is taken, generate a new one and try again
 			userStore.genUsername()
-			errorMessage.value = 'Ce pseudo est déjà pris. Un nouveau pseudo a été généré.'
+			errorMessage.value = 'This username is already taken. A new username has been generated.'
 		}
 	} catch (error) {
 		console.error('Error checking username:', error)
-		errorMessage.value = 'Une erreur est survenue. Veuillez réessayer.'
+		errorMessage.value = 'An error occurred. Please try again.'
 	} finally {
 		isLoading.value = false
 	}
@@ -66,18 +66,18 @@ async function joinHandler() {
 			<label for="username">Username:</label>
 			<input 
 			id="username" 
-			v-model="userStore.username" 
+			v-model="userStore.username"
 			@input="errorMessage = ''"
 			maxlength="20"
-			placeholder="1-20 caractères alphanumériques"
+			placeholder="1-20 alphanumeric characters"
 			/>
 			<label for="room">Room:</label>
-			<input 
-			id="room" 
-			v-model="userStore.roomName" 
+			<input
+			id="room"
+			v-model="userStore.roomName"
 			@input="errorMessage = ''"
 			maxlength="20"
-			placeholder="1-20 caractères alphanumériques"
+			placeholder="1-20 alphanumeric characters"
 			/>
 			<div v-if="errorMessage" class="error-message">
 				{{ errorMessage }}

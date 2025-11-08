@@ -1,12 +1,12 @@
 import { vi } from 'vitest'
 
-// Filtrer les warnings Vue spécifiques liés aux lifecycle hooks dans les tests
+// Filter Vue-specific warnings related to lifecycle hooks in tests
 const originalConsoleWarn = console.warn
 
 console.warn = (...args: unknown[]) => {
   const message = args[0]
 
-  // Ignorer les warnings Vue sur les lifecycle hooks appelés hors contexte de composant
+  // Ignore Vue warnings about lifecycle hooks called outside component context
   if (
     typeof message === 'string' &&
     (message.includes('onMounted is called when there is no active component instance') ||
@@ -16,6 +16,6 @@ console.warn = (...args: unknown[]) => {
     return
   }
 
-  // Afficher tous les autres warnings
+  // Display all other warnings
   originalConsoleWarn(...args)
 }

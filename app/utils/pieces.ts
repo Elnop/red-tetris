@@ -1,20 +1,20 @@
-// ----------------------- Types (supporte 4×4 pour la pièce I)
+// ----------------------- Types (supports 4×4 for I piece)
 export type Cell = 0 | 1
-export type Matrix = Cell[][] // carré N×N (N=3 ou 4 selon la pièce)
+export type Matrix = Cell[][] // N×N square (N=3 or 4 depending on piece)
 
 export type PieceName = 'I' | 'T' | 'L' | 'J' | 'S' | 'Z' | 'O'
 
 export interface PieceDef {
 	name: PieceName
 	color: string
-	base: Matrix               // orientation 0°
-	rotations: Matrix[]        // 0°, 90°, 180°, 270° (dédupliquées)
+	base: Matrix               // 0° orientation
+	rotations: Matrix[]        // 0°, 90°, 180°, 270° (deduplicated)
 }
 
 export interface ActivePiece {
 	name: PieceName
 	color: string
-	rotIndex: number           // index dans rotations
+	rotIndex: number           // index in rotations
 	matrix: Matrix
 }
 
@@ -47,7 +47,7 @@ const uniqueRotations = (base: Matrix): Matrix[] => {
 	return rots
 }
 
-// ----------------------- Définitions (principalement 4×4, padding avec 0)
+// ----------------------- Definitions (mainly 4×4, padded with 0)
 const defsRaw: Array<{ name: PieceName; color: string; base: Matrix }> = [
 	{
 		name: 'I',
@@ -113,9 +113,9 @@ const defsRaw: Array<{ name: PieceName; color: string; base: Matrix }> = [
 		name: 'O',
 		color: '#FFD700',
 		base: [
-			[0, 1, 1, 0],
-			[0, 1, 1, 0],
 			[0, 0, 0, 0],
+			[0, 1, 1, 0],
+			[0, 1, 1, 0],
 			[0, 0, 0, 0],
 		],
 	},
@@ -131,7 +131,7 @@ export const PIECES: Record<PieceName, PieceDef> = defsRaw.reduce((acc, d) => {
 	return acc
 }, {} as Record<PieceName, PieceDef>)
 
-// ----------------------- Génération (aléatoire non-déterministe)
+// ----------------------- Generation (non-deterministic random)
 export const randomPiece = (): ActivePiece => {
 	const names = Object.keys(PIECES) as PieceName[]
 	const name = names[Math.floor(Math.random() * names.length)] as PieceName
@@ -151,8 +151,8 @@ export const rotateActiveCW = (p: ActivePiece): ActivePiece => {
 	return { ...p, rotIndex: next, matrix: def.rotations[next]! }
 }
 
-// ----------------------- Utilitaires
-/** Renvoie les coordonnées [x,y] des cellules actives (1) dans la matrice NxN */
+// ----------------------- Utilities
+/** Returns the [x,y] coordinates of active cells (1) in the NxN matrix */
 export const toCoords = (m: Matrix): Array<[number, number]> => {
 	const coords: Array<[number, number]> = []
 	const n = m.length
@@ -160,17 +160,17 @@ export const toCoords = (m: Matrix): Array<[number, number]> => {
 		return coords
 }
 
-/** Rend la matrice en string (utile pour debug) */
+/** Renders the matrix as a string (useful for debugging) */
 export const renderMatrix = (m: Matrix): string =>
 	m.map(r => r.map(c => (c ? '■' : '·')).join(' ')).join('\n')
 
-// ----------------------- Files d'attente
-/** Génère une file de pièces aléatoires de longueur donnée */
+// ----------------------- Queues
+/** Generates a queue of random pieces of given length */
 export const generateQueue = (length: number): ActivePiece[] =>
 	Array.from({ length }, () => randomPiece())
 
-// ----------------------- PRNG déterministe + 7-bag
-/** PRNG Mulberry32 déterministe */
+// ----------------------- Deterministic PRNG + 7-bag
+/** Deterministic Mulberry32 PRNG */
 export const createPRNG = (seed: number) => {
 	let s = seed >>> 0
 	return () => {
@@ -193,7 +193,7 @@ const makeShuffledBag = (rand: () => number): PieceName[] => {
 	return bag
 }
 
-/** Génère une file de pièces déterministe depuis un seed (7-bag) */
+/** Generates a deterministic queue of pieces from a seed (7-bag) */
 export const generateQueueFromSeed = (seed: number, length: number): ActivePiece[] => {
 	const rand = createPRNG(seed)
 	const names: PieceName[] = []

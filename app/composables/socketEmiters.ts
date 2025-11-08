@@ -18,21 +18,21 @@ export function useSocketEmiters() {
 	const pendingEmits: (() => void)[] = [];
 	
 	function handleSocketConnect() {
-		// Exécuter tous les événements en attente
+		// Execute all pending events
 		while (pendingEmits.length) {
 			const emitFn = pendingEmits.shift();
 			if (emitFn) emitFn();
 		}
 	}
-	
-	// S'abonner à l'événement de connexion
+
+	// Subscribe to connection event
 	onMounted(() => {
 		if (socket) {
 			socket.on('connect', handleSocketConnect);
 		}
 	});
-	
-	// Nettoyer à la destruction
+
+	// Clean up on unmount
 	onUnmounted(() => {
 		if (socket) {
 			socket.off('connect', handleSocketConnect);

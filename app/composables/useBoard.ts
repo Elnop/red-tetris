@@ -48,14 +48,14 @@ export function useBoard() {
 		const out: string[] = []
 		const flat = grid.value.flat()
 		for (let i = 0; i < flat.length; i++) {
-			// '1' pour les cellules occupées normales, 'W' pour les lignes blanches, '0' pour vide
+			// '1' for normal occupied cells, 'W' for white lines, '0' for empty
 			const cell = flat[i]
 			if (cell === '#FFFFFF') {
-				out.push('W') // Ligne blanche indestructible
+				out.push('W') // Indestructible white line
 			} else if (cell) {
-				out.push('1') // Bloc normal
+				out.push('1') // Normal block
 			} else {
-				out.push('0') // Case vide
+				out.push('0') // Empty cell
 			}
 		}
 		return out
@@ -76,20 +76,20 @@ export function useBoard() {
 
 	const clearLines = (): void => {
 		let linesRemoved = 0
-		
+
 		for (let y = ROWS - 1; y >= 0; y--) {
 			if (isLineFull(y) && !isWhiteLine(y)) {
 				removeLine(y)
 				linesRemoved++
-				y++ // Vérifier à nouveau la même position
+				y++ // Check the same position again
 			}
 		}
-		
+
 		if (linesRemoved > 0) {
 			updateLevelInfo(linesRemoved)
 			emitGridUpdate(serializedGrid())
-			
-			// Émettre un événement séparé pour les lignes complétées
+
+			// Emit separate event for completed lines
 			if (!roomStore.roomId)
 				return
 			emitLines(linesRemoved-1)
@@ -98,21 +98,21 @@ export function useBoard() {
 
 	const addGarbageLines = (count: number) => {
 		if (!isAlive.value) return
-		// Décaler la grille vers le haut
+		// Shift the grid upward
 		for (let y = 0; y < ROWS - count; y++) {
 			setLine(y, grid.value[y + count]!)
 		}
-		
-		// Ajouter les lignes de pénalité en bas (lignes blanches indestructibles)
+
+		// Add penalty lines at the bottom (indestructible white lines)
 		for (let y = ROWS - count; y < ROWS; y++) {
-			// Créer une ligne complètement blanche sans trou
+			// Create a completely white line without holes
 			setLine(y, Array(COLS).fill('#FFFFFF'))
 		}
-		
-		// Si la pièce active est maintenant dans une position invalide, la remonter
+
+		// If the active piece is now in an invalid position, move it up
 		if (active.value && !canPlace(active.value.matrix, posX.value, posY.value)) {
 			setPosY(posY.value - count)
-			// Si toujours invalide, game over
+			// If still invalid, game over
 			if (!canPlace(active.value.matrix, posX.value, posY.value)) {
 				setActive(null)
 				setIsAlive(false)
