@@ -72,11 +72,12 @@ prod: ## Run production server
 		-p 3000:3000 \
 		-p 3001:3001 \
 		$(IMAGE_NAME):prod
-	@echo "$(GREEN)✓ Production server running at:$(NC)"
-	@echo "  Frontend: http://localhost:3000"
-	@echo "  Backend:  http://localhost:3001"
+	@echo "$(GREEN)✓ Production server starting...$(NC)"
+	@sleep 3
+	@echo "$(GREEN)Server URLs:$(NC)"
+	@docker logs $(PROD_CONTAINER) 2>&1 | grep -E "(Local|Network|listening)" || echo "  Frontend: http://localhost:3000\n  Backend:  http://localhost:3001"
 	@echo ""
-	@echo "$(YELLOW)Tip: Use 'make logs-prod' to see output$(NC)"
+	@echo "$(YELLOW)Tip: Use 'make logs-prod' to see full output$(NC)"
 
 # ================================
 # Test targets
