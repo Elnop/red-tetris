@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue"
+import { ref, onMounted, onUnmounted, computed } from "vue"
 import { useRoute } from "vue-router"
 import { storeToRefs } from 'pinia'
 import { useUserStore } from "~/stores/useUserStore"
 import { useGameStore } from "~/stores/useGameStore"
 import { useRoomStore } from "~/stores/useRoomStore"
+import { useThemeStore } from "~/stores/useThemeStore"
 import { navigateTo } from "nuxt/app"
 import { useSocketEmiters } from "~/composables/socketEmiters"
 
@@ -26,6 +27,7 @@ const userId = route.params.userName as string | undefined || props.userName
 const userStore = useUserStore()
 const gameStore = useGameStore()
 const roomStore = useRoomStore()
+const themeStore = useThemeStore()
 
 const { level, linesCleared } = storeToRefs(gameStore)
 
@@ -81,7 +83,10 @@ const startForRoom = () => {
 </script>
 
 <template>
-	<div class="room-container">
+	<div class="room-container" :style="{
+		'--theme-primary': themeStore.colors.primary,
+		'--theme-secondary': themeStore.colors.secondary
+	}">
 		<header class="room-header">
 			<NuxtLink to="/" class="home-link">
 				<span class="pixel-arrow">◄</span> Home
@@ -180,11 +185,9 @@ const startForRoom = () => {
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-	--primary-red: #ff0000;
 	--dark-bg: #0a0a12;
 	--darker-bg: #050508;
 	--accent-yellow: #ffcc00;
-	--text-glow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #ff0000, 0 0 20px #ff0000;
 }
 
 * {
@@ -216,9 +219,9 @@ body {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: 
-	linear-gradient(rgba(255, 0, 0, 0.1) 1px, transparent 1px),
-	linear-gradient(90deg, rgba(255, 0, 0, 0.1) 1px, transparent 1px);
+	background:
+	linear-gradient(color-mix(in srgb, var(--theme-primary) 10%, transparent) 1px, transparent 1px),
+	linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 10%, transparent) 1px, transparent 1px);
 	background-size: 20px 20px;
 	pointer-events: none;
 	z-index: 0;
@@ -279,17 +282,17 @@ body {
 
 .players-panel {
 	background: rgba(10, 10, 20, 0.8);
-	border: 3px solid var(--primary-red);
+	border: 3px solid var(--theme-primary);
 	border-radius: 10px;
 	padding: 20px;
 	width: 300px;
-	box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 	height: fit-content;
 }
 
 .panel-title {
 	font-family: 'Press Start 2P', cursive;
-	color: #ff0000;
+	color: var(--theme-primary);
 	font-size: 0.8rem;
 	margin: 0 0 1.5rem 0;
 	padding-bottom: 0.8rem;
@@ -297,7 +300,7 @@ body {
 	text-transform: uppercase;
 	letter-spacing: 1px;
 	width: 100%;
-	border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+	border-bottom: 1px solid color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .players-list {
@@ -363,7 +366,7 @@ body {
 }
 
 .start-btn {
-	background: linear-gradient(180deg, #ff3333 0%, #cc0000 100%);
+	background: linear-gradient(180deg, var(--theme-secondary) 0%, var(--theme-primary) 100%);
 	color: white;
 	padding: 12px 25px;
 	font-family: 'Press Start 2P', cursive;
@@ -373,21 +376,21 @@ body {
 	cursor: pointer;
 	position: relative;
 	overflow: hidden;
-	border: 2px solid #ff0000;
-	box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+	border: 2px solid var(--theme-primary);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 	transition: all 0.3s ease;
 	text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
 }
 
 .start-btn:hover:not(:disabled) {
 	transform: translateY(-2px);
-	box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+	box-shadow: 0 0 20px color-mix(in srgb, var(--theme-primary) 80%, transparent);
 	text-shadow: 0 0 10px #fff;
 }
 
 .start-btn:active:not(:disabled) {
 	transform: translateY(1px);
-	box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+	box-shadow: 0 0 5px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 .start-btn:disabled {
@@ -404,7 +407,7 @@ body {
 	background: rgba(0, 0, 0, 0.3);
 	padding: 10px 0;
 	border-radius: 8px;
-	border: 1px solid rgba(255, 0, 0, 0.3);
+	border: 1px solid color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .stat-item {
@@ -423,11 +426,11 @@ body {
 }
 
 .stat-value {
-	color: #ff0000;
+	color: var(--theme-primary);
 	font-family: 'Press Start 2P', cursive;
 	font-size: 1.5rem;
 	font-weight: bold;
-	text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+	text-shadow: 0 0 5px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 .controls-panel {
@@ -435,7 +438,7 @@ body {
 	top: 20px;
 	right: 20px;
 	background: #1a1a1a;
-	border: 2px solid #ff0000;
+	border: 2px solid var(--theme-primary);
 	border-radius: 8px;
 	padding: 1.5rem;
 	color: white;
@@ -448,7 +451,7 @@ body {
 
 .controls-title {
 	font-family: 'Press Start 2P', cursive;
-	color: #ff0000;
+	color: var(--theme-primary);
 	font-size: 0.8rem;
 	margin: 0 0 1.5rem 0;
 	padding-bottom: 0.8rem;
@@ -456,7 +459,7 @@ body {
 	text-transform: uppercase;
 	letter-spacing: 1px;
 	width: 100%;
-	border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+	border-bottom: 1px solid color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 /* Styled keyboard */

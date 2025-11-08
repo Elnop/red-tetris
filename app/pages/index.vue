@@ -105,7 +105,9 @@ async function joinHandler() {
 				color: themeStore.colors.primary
 			}"
 			/>
-			<div v-if="errorMessage" class="error-message">
+			<div v-if="errorMessage" class="error-message" :style="{
+				color: themeStore.colors.secondary
+			}">
 				{{ errorMessage }}
 			</div>
 		</div>
@@ -221,28 +223,6 @@ body {
 	transform: scale(1.05);
 }
 
-.info-block {
-	text-align: center;
-	margin-bottom: 2rem;
-}
-.big-label {
-	font-family: 'Press Start 2P', monospace;
-	font-size: 1.3rem;
-	font-weight: bold;
-	color: #e53935;
-	margin-bottom: 0.3rem;
-	letter-spacing: 1px;
-}
-.big-value {
-	font-family: 'Press Start 2P', monospace;
-	font-size: 1.5rem;
-	color: #fff;
-	background: #222;
-	border-radius: 8px;
-	padding: 0.5rem 1.2rem;
-	margin-bottom: 1.2rem;
-	box-shadow: 0 2px 8px #b71c1c44;
-}
 .global-lines {
 	margin: 15px 0;
 	text-align: center;
@@ -295,7 +275,6 @@ body {
 }
 
 .error-message {
-	color: #ff5252;
 	font-family: 'Press Start 2P', monospace;
 	font-size: 0.9rem;
 	margin-top: 0.5rem;

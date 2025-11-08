@@ -5,10 +5,12 @@ import { useGame } from '~/composables/useGame';
 import { useGameStore } from '~/stores/useGameStore';
 import { useRoomStore } from '~/stores/useRoomStore';
 import { useUserStore } from '~/stores/useUserStore';
+import { useThemeStore } from '~/stores/useThemeStore';
 
 const roomStore = useRoomStore()
 const userStore = useUserStore()
 const gameStore = useGameStore()
+const themeStore = useThemeStore()
 
 const { COLS, ROWS } = gameStore
 const game = useGame()
@@ -40,7 +42,12 @@ const { flatCells } = board
 					<div>SPECTATING</div>
 				</div>
 			</div>
-			<div class="board" :style="{ '--cols': String(COLS), '--rows': String(ROWS) }">
+			<div class="board" :style="{
+				'--cols': String(COLS),
+				'--rows': String(ROWS),
+				'border': `3px solid ${themeStore.colors.primary}`,
+				'boxShadow': `0 0 20px ${themeStore.colors.primary}40`
+			}">
 				<div
 				v-for="(_, idx) in flatCells"
 				:key="idx"
@@ -125,7 +132,6 @@ const { flatCells } = board
 	background: #1f2937;
 	padding: 6px;
 	border-radius: 8px;
-	box-shadow: 0 6px 20px rgba(0,0,0,0.25);
 }
 
 .cell {

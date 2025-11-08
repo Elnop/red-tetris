@@ -75,7 +75,10 @@ prod: ## Run production server
 	@echo "$(GREEN)✓ Production server starting...$(NC)"
 	@sleep 3
 	@echo "$(GREEN)Server URLs:$(NC)"
-	@docker logs $(PROD_CONTAINER) 2>&1 | grep -E "(Local|Network|listening)" || echo "  Frontend: http://localhost:3000\n  Backend:  http://localhost:3001"
+	@HOST_IP=$$(hostname -I | awk '{print $$1}'); \
+	docker logs $(PROD_CONTAINER) 2>&1 | grep -q "Listening on" && \
+	echo "  Frontend: http://$${HOST_IP}:3000" || echo "  Frontend: http://localhost:3000"; \
+	echo "  Backend:  http://$${HOST_IP}:3001"
 	@echo ""
 	@echo "$(YELLOW)Tip: Use 'make logs-prod' to see full output$(NC)"
 
