@@ -112,10 +112,10 @@ const startForRoom = () => {
 			</div>
 			
 			<div v-if="amLeader()" class="start-section">
-				<button 
-				@click="startForRoom" 
+				<button
+				@click="startForRoom"
 				class="start-btn"
-				:disabled="gameStore.active? true : false"
+				:disabled="isRunning && !gameFinished"
 				>
 				{{ gameFinished || gameStore.won ? 'PLAY AGAIN' : 'START' }}
 			</button>
