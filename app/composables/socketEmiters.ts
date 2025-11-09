@@ -116,6 +116,7 @@ export function useSocketEmiters() {
 		
 		socket.on("tetris-start", ({ seed }: { seed: number }) => {
 			setIsRunning(true)
+			setGameFinished(false)
 			window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
 		})
 		

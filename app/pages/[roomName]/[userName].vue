@@ -77,8 +77,9 @@ const amLeader = () => roomStore.leaderName === userStore.username
 const startForRoom = () => {
 	const seed = Math.floor(Math.random() * 2 ** 31)
 	isRunning.value = true
+	gameFinished.value = false
 	emitStart(seed)
-	
+
 }
 </script>
 

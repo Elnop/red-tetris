@@ -232,6 +232,12 @@ export default (nitroApp: NitroApp) => {
 		socket.on("tetris-start", ({ room, seed }: { room: string; seed: number }) => {
 			const state = rooms[room]
 			if (!state) return
+
+			// Prevent restart if a game is already running
+			if (state.running) {
+				return
+			}
+
 			state.running = true
 			state.lastSeed = seed
 			// Mark all players as alive
