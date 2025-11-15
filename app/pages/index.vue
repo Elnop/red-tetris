@@ -146,69 +146,43 @@ async function createHandler() {
 		</div>
 		<!-- Mode Tabs -->
 		<div class="mode-tabs">
-			<button
-				@click="switchMode('join')"
-				class="mode-tab"
-				:class="{ active: mode === 'join' }"
-				:style="{
-					background: mode === 'join' ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : 'rgba(255, 255, 255, 0.1)',
-					borderColor: mode === 'join' ? themeStore.colors.primary : 'rgba(255, 255, 255, 0.3)'
-				}"
-			>
+			<button @click="switchMode('join')" class="mode-tab" :class="{ active: mode === 'join' }" :style="{
+				background: mode === 'join' ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : 'rgba(255, 255, 255, 0.1)',
+				borderColor: mode === 'join' ? themeStore.colors.primary : 'rgba(255, 255, 255, 0.3)'
+			}">
 				JOIN ROOM
 			</button>
-			<button
-				@click="switchMode('create')"
-				class="mode-tab"
-				:class="{ active: mode === 'create' }"
-				:style="{
-					background: mode === 'create' ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : 'rgba(255, 255, 255, 0.1)',
-					borderColor: mode === 'create' ? themeStore.colors.primary : 'rgba(255, 255, 255, 0.3)'
-				}"
-			>
+			<button @click="switchMode('create')" class="mode-tab" :class="{ active: mode === 'create' }" :style="{
+				background: mode === 'create' ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : 'rgba(255, 255, 255, 0.1)',
+				borderColor: mode === 'create' ? themeStore.colors.primary : 'rgba(255, 255, 255, 0.3)'
+			}">
 				CREATE ROOM
 			</button>
 		</div>
 
 		<div class="input-block">
 			<label for="username">Username:</label>
-			<input
-				id="username"
-				v-model="userStore.username"
-				@input="errorMessage = ''"
-				maxlength="20"
-				placeholder="1-20 alphanumeric characters"
-				:style="{
+			<input id="username" v-model="userStore.username" @input="errorMessage = ''" maxlength="20"
+				placeholder="1-20 alphanumeric characters" :style="{
 					borderColor: themeStore.colors.secondary,
 					color: themeStore.colors.primary
-				}"
-			/>
+				}" />
 			<label for="room">Room Name:</label>
-			<input
-				id="room"
-				v-model="userStore.roomName"
-				@input="errorMessage = ''"
-				maxlength="20"
-				placeholder="1-20 alphanumeric characters"
-				:style="{
+			<input id="room" v-model="userStore.roomName" @input="errorMessage = ''" maxlength="20"
+				placeholder="1-20 alphanumeric characters" :style="{
 					borderColor: themeStore.colors.secondary,
 					color: themeStore.colors.primary
-				}"
-			/>
+				}" />
 
 			<!-- Power-ups toggle (only in create mode) -->
 			<div v-if="mode === 'create'" class="power-ups-toggle">
 				<label class="toggle-label">
-					<input
-						type="checkbox"
-						v-model="powerUpsEnabled"
-						class="toggle-checkbox"
-					/>
+					<input type="checkbox" v-model="powerUpsEnabled" class="toggle-checkbox" />
 					<span class="toggle-slider" :style="{
 						background: powerUpsEnabled ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : '#666'
 					}"></span>
 					<span class="toggle-text">
-						<span class="power-up-icon">⚡</span>
+						<span class="power-up-icon-2">⚡</span>
 						Power-ups {{ powerUpsEnabled ? 'Enabled' : 'Disabled' }}
 					</span>
 				</label>
@@ -221,184 +195,172 @@ async function createHandler() {
 					<label class="spawn-rate-label">
 						Item Spawn Rate: <span class="rate-value">{{ itemSpawnRate }}%</span>
 					</label>
-					<input
-						type="range"
-						v-model.number="itemSpawnRate"
-						min="1"
-						max="100"
-						step="1"
-						class="spawn-rate-slider"
-						:style="{
+					<input type="range" v-model.number="itemSpawnRate" min="1" max="100" step="1"
+						class="spawn-rate-slider" :style="{
 							'--slider-color': themeStore.colors.primary,
 							'--slider-percentage': `${itemSpawnRate}%`
-						}"
-					/>
+						}" />
 					<div class="rate-hint">
-						{{ itemSpawnRate < 20 ? 'Very Rare' : itemSpawnRate < 40 ? 'Rare' : itemSpawnRate < 60 ? 'Balanced' : itemSpawnRate < 80 ? 'Frequent' : 'Very Frequent' }}
+						{{ itemSpawnRate < 20 ? 'Very Rare' : itemSpawnRate < 40 ? 'Rare' : itemSpawnRate < 60
+							? 'Balanced' : itemSpawnRate < 80 ? 'Frequent' : 'Very Frequent' }} </div>
+					</div>
+				</div>
+
+				<div v-if="errorMessage" class="error-message" :style="{
+					color: themeStore.colors.secondary
+				}">
+					{{ errorMessage }}
+				</div>
+			</div>
+
+			<div class="button-block">
+				<button v-if="mode === 'join'" @click="joinHandler" class="rtb-btn" :disabled="isLoading" :style="{
+					background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
+					boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
+				}">
+					{{ isLoading ? 'Loading...' : 'JOIN ROOM' }}
+				</button>
+				<button v-else @click="createHandler" class="rtb-btn" :disabled="isLoading" :style="{
+					background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
+					boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
+				}">
+					{{ isLoading ? 'Creating...' : 'CREATE & JOIN' }}
+				</button>
+			</div>
+
+			<!-- Power-ups description section -->
+			<div class="power-ups-section">
+				<h2 class="section-title" :style="{ color: themeStore.colors.secondary }">
+					⚡ Power-ups Available
+				</h2>
+				<div class="power-ups-grid">
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">💥</div>
+						<div class="power-up-name">Block Bomb</div>
+						<div class="power-up-desc">Détruit un carré de 3x3 blocs au centre de votre grille</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">🎁</div>
+						<div class="power-up-name">Poisoned Gift</div>
+						<div class="power-up-desc">Envoie 1 ligne de garbage à tous les adversaires</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">🍀</div>
+						<div class="power-up-name">Item Rush</div>
+						<div class="power-up-desc">Augmente à 100% la chance d'avoir des items pendant 12 secondes</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">🌊</div>
+						<div class="power-up-name">Ground Breaker</div>
+						<div class="power-up-desc">Détruit la ligne la plus basse et fait descendre tout le reste</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">🌀</div>
+						<div class="power-up-name">Confusion</div>
+						<div class="power-up-desc">Inverse les contrôles de tous les adversaires pendant 5 secondes
+						</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">❄️</div>
+						<div class="power-up-name">Freeze</div>
+						<div class="power-up-desc">Gèle tous les adversaires pendant 3 secondes</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">🛡️</div>
+						<div class="power-up-name">Immunity</div>
+						<div class="power-up-desc">Immunité contre les garbage lines pendant 10 secondes</div>
+					</div>
+					<div class="power-up-card" :style="{
+						borderColor: themeStore.colors.secondary,
+						background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+					}">
+						<div class="power-up-icon">🔮</div>
+						<div class="power-up-name">Preview</div>
+						<div class="power-up-desc">Voir les 5 prochaines pièces pendant 10 secondes</div>
 					</div>
 				</div>
 			</div>
 
-			<div v-if="errorMessage" class="error-message" :style="{
-				color: themeStore.colors.secondary
+			<footer class="game-footer" :style="{
+				borderTopColor: themeStore.colors.secondary
 			}">
-				{{ errorMessage }}
-			</div>
-		</div>
+				<div class="footer-content">
+					<!-- Left Section -->
+					<div class="footer-section">
+						<div class="footer-title" :style="{ color: themeStore.colors.secondary }">About</div>
+						<div class="footer-text">
+							42 School Project
+						</div>
+					</div>
 
-		<div class="button-block">
-			<button
-				v-if="mode === 'join'"
-				@click="joinHandler"
-				class="rtb-btn"
-				:disabled="isLoading"
-				:style="{
-					background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
-					boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
-				}"
-			>
-				{{ isLoading ? 'Loading...' : 'JOIN ROOM' }}
-			</button>
-			<button
-				v-else
-				@click="createHandler"
-				class="rtb-btn"
-				:disabled="isLoading"
-				:style="{
-					background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
-					boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
-				}"
-			>
-				{{ isLoading ? 'Creating...' : 'CREATE & JOIN' }}
-			</button>
-		</div>
+					<!-- Center Section -->
+					<div class="footer-section">
+						<div class="footer-title" :style="{ color: themeStore.colors.secondary }">Contributors</div>
+						<div class="footer-text">
+							Barbara & <a href="https://github.com/Elnop" target="_blank" rel="noopener noreferrer"
+								class="author-link">Leon</a>
+						</div>
+					</div>
 
-		<!-- Power-ups description section -->
-		<div class="power-ups-section">
-			<h2 class="section-title" :style="{ color: themeStore.colors.secondary }">
-				⚡ Power-ups Available
-			</h2>
-			<div class="power-ups-grid">
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">💥</div>
-					<div class="power-up-name">Block Bomb</div>
-					<div class="power-up-desc">Détruit un carré de 3x3 blocs au centre de votre grille</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">🎁</div>
-					<div class="power-up-name">Poisoned Gift</div>
-					<div class="power-up-desc">Envoie 1 ligne de garbage à tous les adversaires</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">🍀</div>
-					<div class="power-up-name">Item Rush</div>
-					<div class="power-up-desc">Augmente à 100% la chance d'avoir des items pendant 12 secondes</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">🌊</div>
-					<div class="power-up-name">Ground Breaker</div>
-					<div class="power-up-desc">Détruit la ligne la plus basse et fait descendre tout le reste</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">🌀</div>
-					<div class="power-up-name">Confusion</div>
-					<div class="power-up-desc">Inverse les contrôles de tous les adversaires pendant 5 secondes</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">❄️</div>
-					<div class="power-up-name">Freeze</div>
-					<div class="power-up-desc">Gèle tous les adversaires pendant 3 secondes</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">🛡️</div>
-					<div class="power-up-name">Immunity</div>
-					<div class="power-up-desc">Immunité contre les garbage lines pendant 10 secondes</div>
-				</div>
-				<div class="power-up-card" :style="{
-					borderColor: themeStore.colors.secondary,
-					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
-				}">
-					<div class="power-up-icon">🔮</div>
-					<div class="power-up-name">Preview</div>
-					<div class="power-up-desc">Voir les 5 prochaines pièces pendant 10 secondes</div>
-				</div>
-			</div>
-		</div>
-
-		<footer class="game-footer" :style="{
-			borderTopColor: themeStore.colors.secondary
-		}">
-			<div class="footer-content">
-				<!-- Left Section -->
-				<div class="footer-section">
-					<div class="footer-title" :style="{ color: themeStore.colors.secondary }">About</div>
-					<div class="footer-text">
-						42 School Project
+					<!-- Right Section - Links -->
+					<div class="footer-section">
+						<div class="footer-title" :style="{ color: themeStore.colors.secondary }">Links</div>
+						<div class="footer-links">
+							<a href="https://github.com/Elnop/red-tetris" target="_blank" rel="noopener noreferrer"
+								class="footer-link" :style="{
+									color: themeStore.colors.secondary,
+									borderColor: `${themeStore.colors.secondary}99`,
+									background: `${themeStore.colors.secondary}26`
+								}">
+								<svg class="github-icon" viewBox="0 0 24 24" width="18" height="18">
+									<path fill="currentColor"
+										d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z" />
+								</svg>
+								GitHub Repository
+							</a>
+							<a href="https://projects.intra.42.fr/42cursus-red-tetris/mine" target="_blank"
+								rel="noopener noreferrer" class="footer-link" :style="{
+									color: themeStore.colors.secondary,
+									borderColor: `${themeStore.colors.secondary}99`,
+									background: `${themeStore.colors.secondary}26`
+								}">
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+									fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+									stroke-linejoin="round" class="lucide lucide-school-2">
+									<circle cx="12" cy="10" r="1" />
+									<path d="M4 10a8 8 0 0 1 16 0" />
+									<path d="M12 10v10" />
+									<path d="M12 20v-6" />
+									<path d="m8 18 4-2 4 2" />
+								</svg>
+								42 Intra Project
+							</a>
+						</div>
 					</div>
 				</div>
-
-				<!-- Center Section -->
-				<div class="footer-section">
-					<div class="footer-title" :style="{ color: themeStore.colors.secondary }">Contributors</div>
-					<div class="footer-text">
-						Barbara & <a href="https://github.com/Elnop" target="_blank" rel="noopener noreferrer" class="author-link">Leon</a>
-					</div>
-				</div>
-
-				<!-- Right Section - Links -->
-				<div class="footer-section">
-					<div class="footer-title" :style="{ color: themeStore.colors.secondary }">Links</div>
-					<div class="footer-links">
-						<a href="https://github.com/Elnop/red-tetris" target="_blank" rel="noopener noreferrer" class="footer-link" :style="{
-							color: themeStore.colors.secondary,
-							borderColor: `${themeStore.colors.secondary}99`,
-							background: `${themeStore.colors.secondary}26`
-						}">
-							<svg class="github-icon" viewBox="0 0 24 24" width="18" height="18">
-								<path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
-							</svg>
-							GitHub Repository
-						</a>
-						<a href="https://projects.intra.42.fr/42cursus-red-tetris/mine" target="_blank" rel="noopener noreferrer" class="footer-link" :style="{
-							color: themeStore.colors.secondary,
-							borderColor: `${themeStore.colors.secondary}99`,
-							background: `${themeStore.colors.secondary}26`
-						}">
-							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-school-2">
-								<circle cx="12" cy="10" r="1"/>
-								<path d="M4 10a8 8 0 0 1 16 0"/>
-								<path d="M12 10v10"/>
-								<path d="M12 20v-6"/>
-								<path d="m8 18 4-2 4 2"/>
-							</svg>
-							42 Intra Project
-						</a>
-					</div>
-				</div>
-			</div>
-		</footer>
-	</div>
+			</footer>
+		</div>
 </template>
 
 <style>
@@ -409,7 +371,8 @@ async function createHandler() {
 	box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
 	height: 100vh;
 	width: 100%;
 	overflow-x: hidden;
@@ -448,6 +411,7 @@ body {
 	text-align: center;
 	transition: transform 0.2s;
 }
+
 .project-title:hover {
 	transform: scale(1.05);
 }
@@ -512,6 +476,7 @@ body {
 	width: 100%;
 	max-width: 500px;
 }
+
 .input-block label {
 	font-family: 'Press Start 2P', monospace;
 	font-size: 1rem;
@@ -520,6 +485,7 @@ body {
 	color: #fff;
 	letter-spacing: 1px;
 }
+
 .input-block input {
 	padding: 0.6rem 1rem;
 	border: 2px solid;
@@ -533,6 +499,7 @@ body {
 	transition: border 0.2s;
 	box-sizing: border-box;
 }
+
 .input-block input:focus {
 	outline: none;
 	filter: brightness(0.95);
@@ -595,7 +562,7 @@ body {
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-checkbox:checked + .toggle-slider::after {
+.toggle-checkbox:checked+.toggle-slider::after {
 	left: 33px;
 }
 
@@ -615,10 +582,13 @@ body {
 }
 
 @keyframes pulse-glow {
-	0%, 100% {
+
+	0%,
+	100% {
 		filter: brightness(1);
 		transform: scale(1);
 	}
+
 	50% {
 		filter: brightness(1.5);
 		transform: scale(1.1);
@@ -660,10 +630,10 @@ body {
 	height: 12px;
 	border-radius: 8px;
 	background: linear-gradient(to right,
-		var(--slider-color) 0%,
-		var(--slider-color) var(--slider-percentage),
-		rgba(255, 255, 255, 0.15) var(--slider-percentage),
-		rgba(255, 255, 255, 0.15) 100%);
+			var(--slider-color) 0%,
+			var(--slider-color) var(--slider-percentage),
+			rgba(255, 255, 255, 0.15) var(--slider-percentage),
+			rgba(255, 255, 255, 0.15) 100%);
 	outline: none;
 	-webkit-appearance: none;
 	cursor: pointer;
@@ -767,6 +737,7 @@ body {
 	margin-bottom: 2rem;
 	width: 100%;
 }
+
 .rtb-btn {
 	padding: 0.7rem 1.5rem;
 	color: #fff;
@@ -777,10 +748,12 @@ body {
 	cursor: pointer;
 	transition: all 0.2s;
 }
+
 .rtb-btn:hover {
 	transform: scale(1.05);
 	filter: brightness(1.1);
 }
+
 .rtb-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
@@ -793,6 +766,7 @@ body {
 		padding: 0.6rem 1.2rem;
 	}
 }
+
 .power-ups-section {
 	margin-top: 3rem;
 	margin-bottom: 3rem;
@@ -836,10 +810,18 @@ body {
 	animation: float 3s ease-in-out infinite;
 }
 
+.power-up-icon-2 {
+	font-size: 3rem;
+	margin-bottom: 0.8rem;
+}
+
 @keyframes float {
-	0%, 100% {
+
+	0%,
+	100% {
 		transform: translateY(0px);
 	}
+
 	50% {
 		transform: translateY(-10px);
 	}
@@ -877,6 +859,10 @@ body {
 	.power-up-icon {
 		font-size: 2.5rem;
 	}
+
+	.power-up-icon-2 {
+		font-size: 2.5rem;
+	}
 }
 
 .game-footer {
@@ -889,6 +875,7 @@ body {
 	width: 100vw;
 	margin-top: 2rem;
 }
+
 .footer-content {
 	max-width: 1200px;
 	width: 100%;
@@ -923,6 +910,7 @@ body {
 		padding: 8px 12px;
 	}
 }
+
 .footer-section {
 	padding: 10px;
 	display: flex;
@@ -945,6 +933,7 @@ body {
 	line-height: 1.7;
 	text-align: center;
 }
+
 .footer-links {
 	display: flex;
 	flex-direction: column;
@@ -952,6 +941,7 @@ body {
 	align-items: center;
 	width: 100%;
 }
+
 .footer-link {
 	display: inline-flex;
 	align-items: center;
@@ -969,6 +959,7 @@ body {
 	filter: brightness(1.2);
 	transform: translateY(-2px);
 }
+
 .author-link {
 	color: #4fc3f7 !important;
 	text-decoration: none;
@@ -978,6 +969,7 @@ body {
 	font-weight: bold;
 	font-size: 1.1rem;
 }
+
 .author-link:hover {
 	color: #81d4fa !important;
 	text-decoration: none;
