@@ -123,6 +123,22 @@ export default (nitroApp: NitroApp) => {
 		if (state.users.length !== before) {
 			io.to(room).emit("user-left", username)
 			broadcastUsers(room)
+
+			// Check win conditions after removing user
+			if (state.running && state.users.length > 0) {
+				const alivePlayers = state.users.filter(u => u.alive)
+				if (alivePlayers.length === 1) {
+					const winner = alivePlayers[0]
+					if (winner) {
+						state.running = false
+						io.to(winner.socketId).emit("tetris-win")
+						io.to(room).emit("game-ended", { winner: winner.username })
+					}
+				} else if (alivePlayers.length === 0) {
+					state.running = false
+					io.to(room).emit("game-ended", { winner: '' })
+				}
+			}
 		}
 
 		if (state.users.length === 0) {
@@ -227,6 +243,24 @@ export default (nitroApp: NitroApp) => {
 
 			// Notify other users
 			io.to(room).emit("user-left", username)
+
+			// Check if a game is running and determine winner if only 1 player remains
+			if (currentRoom.running) {
+				const alivePlayers = currentRoom.users.filter(u => u.alive)
+				if (alivePlayers.length === 1 && currentRoom.users.length === 1) {
+					const winner = alivePlayers[0]
+					if (winner) {
+						currentRoom.running = false
+						io.to(winner.socketId).emit("tetris-win")
+						io.to(room).emit("game-ended", { winner: winner.username })
+					}
+				} else if (alivePlayers.length === 0 || currentRoom.users.length === 0) {
+					// Game ended with no winners
+					currentRoom.running = false
+					io.to(room).emit("game-ended", { winner: '' })
+				}
+			}
+
 			broadcastUsers(room)
 
 			// Clean up the room if empty

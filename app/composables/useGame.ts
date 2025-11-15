@@ -237,9 +237,7 @@ export function useGame() {
 	
 	const onUserLeft = (username: string) => {
 		removeGhost(username)
-		if (isPlaying.value && isAlive.value && roomStore.users.length === 1 && roomStore.users[0]?.username === userStore.username) {
-			gameStore.onWin(userStore.username)
-		}
+		// Win condition is now handled server-side when a user leaves during a game
 	}
 
 	const onPlayerLost = ({ username }: { username: string }) => {
