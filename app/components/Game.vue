@@ -140,4 +140,19 @@ const { flatCells } = board
 	border: 1px solid #111827;
 	border-radius: 4px;
 }
+
+@keyframes bomb-flash {
+	0% {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+	50% {
+		transform: scale(1.2);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+}
 </style>

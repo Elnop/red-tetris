@@ -92,7 +92,15 @@ const startForRoom = () => {
 			<NuxtLink to="/" class="home-link">
 				<span class="pixel-arrow">◄</span> Home
 			</NuxtLink>
-			<h1 class="room-title">ROOM: <span class="room-id">{{ roomId }}</span></h1>
+			<h1 class="room-title">
+				ROOM: <span class="room-id">{{ roomId }}</span>
+				<span class="mode-indicator">
+					{{ roomStore.powerUpsEnabled
+						? ` [⚡ POWER-UPS ${Math.round(roomStore.itemSpawnRate * 100)}%]`
+						: ' [CLASSIC]'
+					}}
+				</span>
+			</h1>
 		</header>
 		
 		<div class="room-content">
@@ -139,6 +147,10 @@ const startForRoom = () => {
 					<span class="stat-value">{{ linesCleared }}</span>
 				</div>
 		</div>
+
+		<!-- Item Inventory (only if power-ups are enabled) -->
+		<ItemInventory v-if="isRunning && roomStore.powerUpsEnabled" class="item-inventory-section" />
+
 		<h2 class="controls-title">CONTROLS</h2>
 		<div class="keyboard-layout">
 			<!-- Top row - Arrow keys -->
@@ -269,6 +281,21 @@ body {
 .room-id {
 	color: var(--accent-yellow);
 	text-shadow: 0 0 5px var(--accent-yellow);
+}
+
+.mode-indicator {
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.8);
+	margin-left: 15px;
+}
+
+@media (max-width: 768px) {
+	.mode-indicator {
+		font-size: 0.5rem;
+		margin-left: 10px;
+		display: block;
+		margin-top: 8px;
+	}
 }
 
 .room-content {
@@ -404,9 +431,9 @@ body {
 	display: flex;
 	justify-content: space-around;
 	width: 100%;
-	margin-bottom: 20px;
+	margin-bottom: 15px;
 	background: rgba(0, 0, 0, 0.3);
-	padding: 10px 0;
+	padding: 8px 0;
 	border-radius: 8px;
 	border: 1px solid color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
@@ -443,19 +470,47 @@ body {
 	border-radius: 8px;
 	padding: 1.5rem;
 	color: white;
-	width: 280px;
+	width: 320px;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 }
 
+.item-inventory-section {
+	width: 100%;
+	margin-bottom: 15px;
+}
+
+.item-inventory-section :deep(.item-inventory) {
+	padding: 12px;
+	gap: 12px;
+}
+
+.item-inventory-section :deep(.inventory-slots) {
+	gap: 6px;
+}
+
+.item-inventory-section :deep(.item-slot) {
+	width: 45px;
+	height: 55px;
+}
+
+.item-inventory-section :deep(.active-effects) {
+	gap: 6px;
+}
+
+.item-inventory-section :deep(.effect-item) {
+	padding: 5px 8px;
+	font-size: 0.6rem;
+}
+
 .controls-title {
 	font-family: 'Press Start 2P', cursive;
 	color: var(--theme-primary);
-	font-size: 0.8rem;
-	margin: 0 0 1.5rem 0;
-	padding-bottom: 0.8rem;
+	font-size: 0.75rem;
+	margin: 0 0 1rem 0;
+	padding-bottom: 0.6rem;
 	text-align: center;
 	text-transform: uppercase;
 	letter-spacing: 1px;
@@ -467,7 +522,7 @@ body {
 .keyboard-layout {
 	display: flex;
 	flex-direction: column;
-	gap: 0.8rem;
+	gap: 0.6rem;
 	width: 100%;
 }
 
@@ -503,8 +558,8 @@ body {
 }
 
 .key-arrow {
-	width: 60px;
-	height: 60px;
+	width: 55px;
+	height: 55px;
 }
 
 .key-wide {
@@ -512,8 +567,8 @@ body {
 }
 
 .key-ultrawide {
-	width: 200px;
-	height: 50px;
+	width: 180px;
+	height: 45px;
 	background: #3a3a3a;
 }
 
@@ -542,8 +597,8 @@ body {
 }
 
 .key-spacer {
-	width: 60px;
-	height: 60px;
+	width: 55px;
+	height: 55px;
 }
 
 /* Key press effect */
@@ -608,6 +663,18 @@ body {
 	.room-title {
 		font-size: 20px;
 		margin: 40px 0 20px;
+	}
+}
+
+/* Animation for pieces with items */
+@keyframes item-glow {
+	0%, 100% {
+		border-color: #FFD700;
+		box-shadow: 0 0 10px #FFD700, inset 0 0 10px rgba(255, 215, 0, 0.3);
+	}
+	50% {
+		border-color: #FFA500;
+		box-shadow: 0 0 20px #FFA500, inset 0 0 15px rgba(255, 165, 0, 0.5);
 	}
 }
 

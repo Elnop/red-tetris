@@ -1,9 +1,11 @@
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useGameStore } from "~/stores/useGameStore";
 import { toCoords } from "~/utils/pieces";
 import { useBoard } from "./useBoard";
 import { useSocketEmiters } from "./socketEmiters";
+import { useItems } from "./useItems";
 import { storeToRefs } from "pinia";
+import type { ItemType } from "~/types/items";
 
 export function useActivePiece() {
 	const socketEmiters = useSocketEmiters()
@@ -21,6 +23,9 @@ export function useActivePiece() {
 		setIsAlive,
 		setPosX,
 		setPosY,
+		incrementPieceIndex,
+		currentPieceHasItem,
+		getCurrentPieceItemType
 	} = gameStore
 
 	const {
@@ -31,7 +36,12 @@ export function useActivePiece() {
 		isPlaying,
 		level,
 		queue,
+		currentPieceIndex,
+		itemSpawnMap
 	} = storeToRefs(gameStore)
+
+	// Track current piece item
+	const currentPieceItemType = ref<ItemType | null>(null)
 
 	const board = useBoard()
 	const { 
@@ -64,7 +74,21 @@ export function useActivePiece() {
 	const getActivePieceStyle = (idx: number) => {
 		if (activeIndexes.value.has(idx) && active.value?.color) {
 			const color = active.value.color
-			return { background: color, borderColor: color }
+			const baseStyle = { background: color, borderColor: color }
+
+			// If this piece has an item, add special styling
+			if (currentPieceItemType.value) {
+				return {
+					...baseStyle,
+					borderColor: '#FFD700',
+					borderWidth: '3px',
+					borderStyle: 'solid',
+					boxShadow: '0 0 10px #FFD700, inset 0 0 10px rgba(255, 215, 0, 0.3)',
+					animation: 'item-glow 1.5s ease-in-out infinite'
+				}
+			}
+
+			return baseStyle
 		}
 		return null
 	}
@@ -84,6 +108,19 @@ export function useActivePiece() {
 
 	const lockPiece = () => {
 		mergeActiveToGrid()
+
+		console.log('[ITEMS-DEBUG] Locking piece. Current piece index:', currentPieceIndex.value, 'Item type:', currentPieceItemType.value, 'Map size:', itemSpawnMap.value.size)
+
+		// Check if this piece had an item and collect it (only if power-ups are enabled)
+		if (currentPieceItemType.value && itemSpawnMap.value.size > 0) {
+			console.log('[ITEMS-DEBUG] Collecting item:', currentPieceItemType.value)
+			const items = useItems()
+			items.collectItem(currentPieceItemType.value)
+			currentPieceItemType.value = null
+		} else {
+			console.log('[ITEMS-DEBUG] No item to collect (hasItemType:', !!currentPieceItemType.value, ', mapSize:', itemSpawnMap.value.size, ')')
+		}
+
 		clearLines()
 		if (isAlive.value) {
 			emitGridUpdate(serializedGrid())
@@ -113,6 +150,21 @@ export function useActivePiece() {
 				setActive(queue.value.shift()!)
 				setPosX(spawnX)
 				setPosY(spawnY)
+
+				console.log('[ITEMS-DEBUG] Spawning piece at index:', currentPieceIndex.value, 'Map size:', itemSpawnMap.value.size)
+
+				// Check if this piece has an item
+				if (currentPieceHasItem()) {
+					// Get the item type from server-generated data
+					currentPieceItemType.value = getCurrentPieceItemType()
+					console.log('[ITEMS-DEBUG] Piece has item! Type:', currentPieceItemType.value)
+				} else {
+					currentPieceItemType.value = null
+					console.log('[ITEMS-DEBUG] Piece has no item')
+				}
+
+				// Increment piece index for next spawn
+				incrementPieceIndex()
 			} else {
 				setActive(null)
 				setIsAlive(false)
@@ -120,5 +172,13 @@ export function useActivePiece() {
 			}
 		}
 
-	return {handleDrop, getCurrentBaseDropSpeed, getActivePieceStyle, hardDrop, trySpawnNextActivePiece, tryMoveActivePiece}
+	return {
+		handleDrop,
+		getCurrentBaseDropSpeed,
+		getActivePieceStyle,
+		hardDrop,
+		trySpawnNextActivePiece,
+		tryMoveActivePiece,
+		currentPieceItemType
+	}
 }

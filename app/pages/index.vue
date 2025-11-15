@@ -2,13 +2,16 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from '#app';
 import { useUserStore } from '~/stores/useUserStore';
+import { useRoomStore } from '~/stores/useRoomStore';
 import { useThemeStore } from '~/stores/useThemeStore';
 import { validateUsername, validateRoomName } from '~/utils/validation';
 import { useSocketEmiters } from '~/composables/socketEmiters';
 
 const userStore = useUserStore()
+const roomStore = useRoomStore()
 const themeStore = useThemeStore()
 const router = useRouter()
+const { $socket } = useNuxtApp()
 
 const { emitUserNameIsTaken } = useSocketEmiters()
 
@@ -18,31 +21,43 @@ const handleTitleClick = () => {
 	themeStore.cycleTheme()
 }
 
+// UI State
+const mode = ref<'join' | 'create'>('join')
+const powerUpsEnabled = ref(true)
+const itemSpawnRate = ref(8) // Default 8%
 const errorMessage = ref('')
 const isLoading = ref(false)
+
+function switchMode(newMode: 'join' | 'create') {
+	mode.value = newMode
+	errorMessage.value = ''
+}
 
 async function joinHandler() {
 	const usernameError = validateUsername(userStore.username || '')
 	const roomError = validateRoomName(userStore.roomName || '')
-	
+
 	if (usernameError) {
 		errorMessage.value = usernameError
 		return
 	}
-	
+
 	if (roomError) {
 		errorMessage.value = roomError
 		return
 	}
-	
+
 	errorMessage.value = ''
 	isLoading.value = true
-	
+
 	try {
 		// Check if username is available
 		const isAvailable = await emitUserNameIsTaken()
-		
+
 		if (isAvailable) {
+			// Store power-ups setting in room store
+			roomStore.setPowerUpsEnabled(powerUpsEnabled.value)
+
 			// If username is available, navigate to the room
 			router.push(`/${userStore.roomName}`)
 		} else {
@@ -58,9 +73,58 @@ async function joinHandler() {
 	}
 }
 
-// function createHandler() {
-//    router.push(`/room/${userStore.roomName || userStore.username}`)
-// }
+function checkRoomExists(roomName: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		if (!$socket) {
+			resolve(false)
+			return
+		}
+		const socket = $socket as import('~/types/socket').TypedSocket
+		socket.emit('check-room-exists', { room: roomName }, (response: { exists: boolean }) => {
+			resolve(response.exists)
+		})
+	})
+}
+
+async function createHandler() {
+	const usernameError = validateUsername(userStore.username || '')
+	const roomError = validateRoomName(userStore.roomName || '')
+
+	if (usernameError) {
+		errorMessage.value = usernameError
+		return
+	}
+
+	if (roomError) {
+		errorMessage.value = roomError
+		return
+	}
+
+	errorMessage.value = ''
+	isLoading.value = true
+
+	try {
+		// Check if room already exists
+		const exists = await checkRoomExists(userStore.roomName || '')
+		if (exists) {
+			errorMessage.value = `Room "${userStore.roomName}" already exists. Please choose a different name or join the existing room.`
+			isLoading.value = false
+			return
+		}
+
+		// Store power-ups setting and item spawn rate in room store
+		roomStore.setPowerUpsEnabled(powerUpsEnabled.value)
+		roomStore.setItemSpawnRate(itemSpawnRate.value / 100) // Convert percentage to decimal
+
+		// Navigate to the room as creator
+		router.push(`/${userStore.roomName}`)
+	} catch (error) {
+		console.error('Error creating room:', error)
+		errorMessage.value = 'An error occurred. Please try again.'
+	} finally {
+		isLoading.value = false
+	}
+}
 
 </script>
 
@@ -80,50 +144,208 @@ async function joinHandler() {
 				boxShadow: `0 0 10px ${themeStore.colors.secondary}80`
 			}">TOTAL LINES: {{ userStore.globalLinesCleared }}</div>
 		</div>
+		<!-- Mode Tabs -->
+		<div class="mode-tabs">
+			<button
+				@click="switchMode('join')"
+				class="mode-tab"
+				:class="{ active: mode === 'join' }"
+				:style="{
+					background: mode === 'join' ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : 'rgba(255, 255, 255, 0.1)',
+					borderColor: mode === 'join' ? themeStore.colors.primary : 'rgba(255, 255, 255, 0.3)'
+				}"
+			>
+				JOIN ROOM
+			</button>
+			<button
+				@click="switchMode('create')"
+				class="mode-tab"
+				:class="{ active: mode === 'create' }"
+				:style="{
+					background: mode === 'create' ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : 'rgba(255, 255, 255, 0.1)',
+					borderColor: mode === 'create' ? themeStore.colors.primary : 'rgba(255, 255, 255, 0.3)'
+				}"
+			>
+				CREATE ROOM
+			</button>
+		</div>
+
 		<div class="input-block">
 			<label for="username">Username:</label>
 			<input
-			id="username"
-			v-model="userStore.username"
-			@input="errorMessage = ''"
-			maxlength="20"
-			placeholder="1-20 alphanumeric characters"
-			:style="{
-				borderColor: themeStore.colors.secondary,
-				color: themeStore.colors.primary
-			}"
+				id="username"
+				v-model="userStore.username"
+				@input="errorMessage = ''"
+				maxlength="20"
+				placeholder="1-20 alphanumeric characters"
+				:style="{
+					borderColor: themeStore.colors.secondary,
+					color: themeStore.colors.primary
+				}"
 			/>
-			<label for="room">Room:</label>
+			<label for="room">Room Name:</label>
 			<input
-			id="room"
-			v-model="userStore.roomName"
-			@input="errorMessage = ''"
-			maxlength="20"
-			placeholder="1-20 alphanumeric characters"
-			:style="{
-				borderColor: themeStore.colors.secondary,
-				color: themeStore.colors.primary
-			}"
+				id="room"
+				v-model="userStore.roomName"
+				@input="errorMessage = ''"
+				maxlength="20"
+				placeholder="1-20 alphanumeric characters"
+				:style="{
+					borderColor: themeStore.colors.secondary,
+					color: themeStore.colors.primary
+				}"
 			/>
+
+			<!-- Power-ups toggle (only in create mode) -->
+			<div v-if="mode === 'create'" class="power-ups-toggle">
+				<label class="toggle-label">
+					<input
+						type="checkbox"
+						v-model="powerUpsEnabled"
+						class="toggle-checkbox"
+					/>
+					<span class="toggle-slider" :style="{
+						background: powerUpsEnabled ? `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)` : '#666'
+					}"></span>
+					<span class="toggle-text">
+						<span class="power-up-icon">⚡</span>
+						Power-ups {{ powerUpsEnabled ? 'Enabled' : 'Disabled' }}
+					</span>
+				</label>
+				<div class="power-up-hint">
+					{{ powerUpsEnabled ? '8 special items available during gameplay' : 'Classic Tetris mode' }}
+				</div>
+
+				<!-- Item spawn rate slider (only when power-ups enabled) -->
+				<div v-if="powerUpsEnabled" class="item-spawn-rate">
+					<label class="spawn-rate-label">
+						Item Spawn Rate: <span class="rate-value">{{ itemSpawnRate }}%</span>
+					</label>
+					<input
+						type="range"
+						v-model.number="itemSpawnRate"
+						min="1"
+						max="100"
+						step="1"
+						class="spawn-rate-slider"
+						:style="{
+							'--slider-color': themeStore.colors.primary,
+							'--slider-percentage': `${itemSpawnRate}%`
+						}"
+					/>
+					<div class="rate-hint">
+						{{ itemSpawnRate < 20 ? 'Very Rare' : itemSpawnRate < 40 ? 'Rare' : itemSpawnRate < 60 ? 'Balanced' : itemSpawnRate < 80 ? 'Frequent' : 'Very Frequent' }}
+					</div>
+				</div>
+			</div>
+
 			<div v-if="errorMessage" class="error-message" :style="{
 				color: themeStore.colors.secondary
 			}">
 				{{ errorMessage }}
 			</div>
 		</div>
+
 		<div class="button-block">
 			<button
-			@click="joinHandler"
-			class="rtb-btn"
-			:disabled="isLoading"
-			:style="{
-				background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
-				boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
-			}"
+				v-if="mode === 'join'"
+				@click="joinHandler"
+				class="rtb-btn"
+				:disabled="isLoading"
+				:style="{
+					background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
+					boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
+				}"
 			>
-				{{ isLoading ? 'Loading...' : 'JOIN' }}
+				{{ isLoading ? 'Loading...' : 'JOIN ROOM' }}
+			</button>
+			<button
+				v-else
+				@click="createHandler"
+				class="rtb-btn"
+				:disabled="isLoading"
+				:style="{
+					background: `linear-gradient(90deg, ${themeStore.colors.secondary} 0%, ${themeStore.colors.primary} 100%)`,
+					boxShadow: `0 2px 8px ${themeStore.colors.primary}44`
+				}"
+			>
+				{{ isLoading ? 'Creating...' : 'CREATE & JOIN' }}
 			</button>
 		</div>
+
+		<!-- Power-ups description section -->
+		<div class="power-ups-section">
+			<h2 class="section-title" :style="{ color: themeStore.colors.secondary }">
+				⚡ Power-ups Available
+			</h2>
+			<div class="power-ups-grid">
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">💥</div>
+					<div class="power-up-name">Block Bomb</div>
+					<div class="power-up-desc">Détruit un carré de 3x3 blocs au centre de votre grille</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">💣</div>
+					<div class="power-up-name">Add Lines</div>
+					<div class="power-up-desc">Envoie 2 lignes de garbage à tous les adversaires</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">🐌</div>
+					<div class="power-up-name">Speed Down</div>
+					<div class="power-up-desc">Ralentit votre vitesse de chute pendant 8 secondes</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">✨</div>
+					<div class="power-up-name">Clear Random</div>
+					<div class="power-up-desc">Efface 8 blocs aléatoires de votre grille</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">🌀</div>
+					<div class="power-up-name">Confusion</div>
+					<div class="power-up-desc">Inverse les contrôles de tous les adversaires pendant 5 secondes</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">❄️</div>
+					<div class="power-up-name">Freeze</div>
+					<div class="power-up-desc">Gèle tous les adversaires pendant 3 secondes</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">🛡️</div>
+					<div class="power-up-name">Immunity</div>
+					<div class="power-up-desc">Immunité contre les garbage lines pendant 10 secondes</div>
+				</div>
+				<div class="power-up-card" :style="{
+					borderColor: themeStore.colors.secondary,
+					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
+				}">
+					<div class="power-up-icon">🔮</div>
+					<div class="power-up-name">Preview</div>
+					<div class="power-up-desc">Voir les 5 prochaines pièces pendant 10 secondes</div>
+				</div>
+			</div>
+		</div>
+
 		<footer class="game-footer" :style="{
 			borderTopColor: themeStore.colors.secondary
 		}">
@@ -191,10 +413,11 @@ html, body {
 	height: 100vh;
 	width: 100vw;
 	overflow-x: hidden;
+	margin: 0;
+	padding: 0;
 }
 
 body {
-	height: 100vh;
 	margin: 0;
 	font-family: 'Press Start 2P', monospace;
 	position: relative;
@@ -205,16 +428,20 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	height: 100vh;
+	justify-content: flex-start;
+	min-height: 100%;
 	text-align: center;
 	width: 100vw;
+	padding: 40px 20px 0 20px;
+	box-sizing: border-box;
+	overflow-y: auto;
 }
 
 .project-title {
 	font-family: 'Press Start 2P', monospace;
 	font-size: 2.8rem;
-	margin-bottom: 2.5rem;
+	margin-top: 20px;
+	margin-bottom: 2rem;
 	letter-spacing: 2px;
 	text-align: center;
 	transition: transform 0.2s;
@@ -223,8 +450,15 @@ body {
 	transform: scale(1.05);
 }
 
+@media (max-width: 768px) {
+	.project-title {
+		font-size: 2rem;
+		margin-bottom: 1.5rem;
+	}
+}
+
 .global-lines {
-	margin: 15px 0;
+	margin: 10px 0 15px 0;
 	text-align: center;
 }
 
@@ -238,11 +472,43 @@ body {
 	border: 2px solid;
 	border-radius: 5px;
 }
+
+.mode-tabs {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.mode-tab {
+	padding: 0.8rem 2rem;
+	border: 2px solid;
+	border-radius: 8px;
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.3s;
+	color: #fff;
+	text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.mode-tab:hover {
+	transform: translateY(-2px);
+	filter: brightness(1.1);
+}
+
+.mode-tab.active {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 .input-block {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: 2rem;
+	margin-bottom: 1.5rem;
+	width: 100%;
+	max-width: 500px;
 }
 .input-block label {
 	font-family: 'Press Start 2P', monospace;
@@ -257,15 +523,25 @@ body {
 	border: 2px solid;
 	border-radius: 6px;
 	margin-bottom: 0.7rem;
-	width: 420px;
+	width: 100%;
+	max-width: 420px;
 	font-size: 1rem;
 	background: #fff;
 	font-family: 'Press Start 2P', monospace;
 	transition: border 0.2s;
+	box-sizing: border-box;
 }
 .input-block input:focus {
 	outline: none;
 	filter: brightness(0.95);
+}
+
+@media (max-width: 768px) {
+	.input-block input {
+		width: 90vw;
+		max-width: 350px;
+		font-size: 0.9rem;
+	}
 }
 
 .input-block input::placeholder {
@@ -274,21 +550,220 @@ body {
 	opacity: 0.7;
 }
 
+.power-ups-toggle {
+	margin-top: 1.5rem;
+	margin-bottom: 1rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.toggle-label {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	cursor: pointer;
+	position: relative;
+}
+
+.toggle-checkbox {
+	display: none;
+}
+
+.toggle-slider {
+	width: 60px;
+	height: 30px;
+	border-radius: 15px;
+	position: relative;
+	transition: all 0.3s;
+	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-slider::after {
+	content: '';
+	position: absolute;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #fff;
+	top: 3px;
+	left: 3px;
+	transition: all 0.3s;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-checkbox:checked + .toggle-slider::after {
+	left: 33px;
+}
+
+.toggle-text {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.9rem;
+	color: #fff;
+	text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.power-up-icon {
+	font-size: 1.2rem;
+	animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+	0%, 100% {
+		filter: brightness(1);
+		transform: scale(1);
+	}
+	50% {
+		filter: brightness(1.5);
+		transform: scale(1.1);
+	}
+}
+
+.power-up-hint {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.6rem;
+	color: rgba(255, 255, 255, 0.8);
+	text-align: center;
+	line-height: 1.4;
+}
+
+.item-spawn-rate {
+	margin-top: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.8rem;
+	width: 100%;
+	max-width: 420px;
+}
+
+.spawn-rate-label {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.7rem;
+	color: rgba(255, 255, 255, 0.9);
+	text-align: center;
+}
+
+.rate-value {
+	color: var(--slider-color, #fff);
+	text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.spawn-rate-slider {
+	width: 100%;
+	height: 12px;
+	border-radius: 8px;
+	background: linear-gradient(to right,
+		var(--slider-color) 0%,
+		var(--slider-color) var(--slider-percentage),
+		rgba(255, 255, 255, 0.15) var(--slider-percentage),
+		rgba(255, 255, 255, 0.15) 100%);
+	outline: none;
+	-webkit-appearance: none;
+	cursor: pointer;
+	position: relative;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 3px rgba(0, 0, 0, 0.2);
+	transition: all 0.3s ease;
+}
+
+.spawn-rate-slider:hover {
+	border-color: rgba(255, 255, 255, 0.5);
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 15px var(--slider-color);
+}
+
+.spawn-rate-slider:active {
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.spawn-rate-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 28px;
+	height: 28px;
+	border-radius: 6px;
+	background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+	cursor: pointer;
+	border: 3px solid var(--slider-color);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px var(--slider-color);
+	transition: all 0.2s ease;
+	position: relative;
+}
+
+.spawn-rate-slider::-webkit-slider-thumb:hover {
+	transform: scale(1.15);
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 30px var(--slider-color);
+	border-width: 4px;
+}
+
+.spawn-rate-slider::-webkit-slider-thumb:active {
+	transform: scale(1.05);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.7), 0 0 25px var(--slider-color);
+}
+
+.spawn-rate-slider::-moz-range-thumb {
+	width: 28px;
+	height: 28px;
+	border-radius: 6px;
+	background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+	cursor: pointer;
+	border: 3px solid var(--slider-color);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px var(--slider-color);
+	transition: all 0.2s ease;
+}
+
+.spawn-rate-slider::-moz-range-thumb:hover {
+	transform: scale(1.15);
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 30px var(--slider-color);
+	border-width: 4px;
+}
+
+.spawn-rate-slider::-moz-range-thumb:active {
+	transform: scale(1.05);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.7), 0 0 25px var(--slider-color);
+}
+
+.spawn-rate-slider::-moz-range-track {
+	background: transparent;
+	border: none;
+}
+
+.rate-hint {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.55rem;
+	color: rgba(255, 255, 255, 0.7);
+	text-align: center;
+}
+
 .error-message {
 	font-family: 'Press Start 2P', monospace;
 	font-size: 0.9rem;
 	margin-top: 0.5rem;
 	text-align: center;
 	line-height: 1.3;
-	min-height: 2.5rem;
+	min-height: 2rem;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	padding: 0 10px;
 }
+
+@media (max-width: 768px) {
+	.error-message {
+		font-size: 0.7rem;
+	}
+}
+
 .button-block {
 	display: flex;
 	gap: 1rem;
 	justify-content: center;
+	margin-bottom: 2rem;
+	width: 100%;
 }
 .rtb-btn {
 	padding: 0.7rem 1.5rem;
@@ -309,19 +784,108 @@ body {
 	cursor: not-allowed;
 	transform: none;
 }
+
+@media (max-width: 768px) {
+	.rtb-btn {
+		font-size: 0.9rem;
+		padding: 0.6rem 1.2rem;
+	}
+}
+.power-ups-section {
+	margin-top: 3rem;
+	margin-bottom: 3rem;
+	width: 100%;
+	max-width: 1200px;
+	padding: 0 20px;
+}
+
+.section-title {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 1.5rem;
+	margin-bottom: 2rem;
+	text-align: center;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.power-ups-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 1.5rem;
+	width: 100%;
+}
+
+.power-up-card {
+	padding: 1.5rem;
+	border: 2px solid;
+	border-radius: 12px;
+	text-align: center;
+	transition: all 0.3s ease;
+	backdrop-filter: blur(10px);
+}
+
+.power-up-card:hover {
+	transform: translateY(-5px);
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.power-up-icon {
+	font-size: 3rem;
+	margin-bottom: 0.8rem;
+	animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+	0%, 100% {
+		transform: translateY(0px);
+	}
+	50% {
+		transform: translateY(-10px);
+	}
+}
+
+.power-up-name {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.9rem;
+	color: #fff;
+	margin-bottom: 0.8rem;
+	text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.power-up-desc {
+	font-family: 'Press Start 2P', monospace;
+	font-size: 0.6rem;
+	color: rgba(255, 255, 255, 0.8);
+	line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+	.section-title {
+		font-size: 1.2rem;
+	}
+
+	.power-ups-grid {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+	}
+
+	.power-up-card {
+		padding: 1rem;
+	}
+
+	.power-up-icon {
+		font-size: 2.5rem;
+	}
+}
+
 .game-footer {
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
+	position: relative;
 	padding: 16px 0;
 	font-family: 'Press Start 2P', monospace;
 	color: rgba(255, 255, 255, 0.9);
 	background: rgba(20, 20, 20, 0.98);
 	border-top: 3px solid;
 	width: 100vw;
-	z-index: 1000;
-	box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.6);
+	margin-top: 2rem;
 }
 .footer-content {
 	max-width: 1200px;
@@ -331,6 +895,31 @@ body {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1.5fr;
 	gap: 40px;
+}
+
+@media (max-width: 1024px) {
+	.footer-content {
+		grid-template-columns: 1fr;
+		gap: 20px;
+	}
+
+	.footer-section {
+		padding: 5px;
+	}
+
+	.footer-title {
+		font-size: 1rem;
+		margin-bottom: 10px;
+	}
+
+	.footer-text {
+		font-size: 0.9rem;
+	}
+
+	.footer-link {
+		font-size: 0.8rem;
+		padding: 8px 12px;
+	}
 }
 .footer-section {
 	padding: 10px;

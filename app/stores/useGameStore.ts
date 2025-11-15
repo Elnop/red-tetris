@@ -1,9 +1,11 @@
 import { defineStore } from "pinia"
 import { computed, ref } from "vue"
 import type { BoardCell, GhostData } from "~/types/game"
+import type { Item, ItemEffect, ItemType } from "~/types/items"
 import { generateQueue, generateQueueFromSeed, toCoords, type ActivePiece } from "~/utils/pieces"
 import { useUserStore } from "./useUserStore"
 import { useRoomStore } from "./useRoomStore"
+import { MAX_INVENTORY_SIZE } from "~/utils/itemsConfig"
 
 export const useGameStore = defineStore('game', () => {
 	const FPS = 60
@@ -37,8 +39,14 @@ export const useGameStore = defineStore('game', () => {
 	const dropTimer = ref(0)
 	const animationFrameId = ref<number>()
 	let gameLoopInterval: ReturnType<typeof setInterval> | null = null
-	
+
 	let lastFrameTime = 0
+
+	// Item system state
+	const inventory = ref<Item[]>([])
+	const activeEffects = ref<ItemEffect[]>([])
+	const itemSpawnMap = ref<Map<number, ItemType>>(new Map())
+	const currentPieceIndex = ref(0)
 	
 	const userStore = useUserStore()
 	const roomStore = useRoomStore()
@@ -95,9 +103,62 @@ export const useGameStore = defineStore('game', () => {
 	function initQueue(seed?: number) {
 		queue.value = seed === undefined ? generateQueue(14) : generateQueueFromSeed(seed, 200)
 	}
-	
+
 	function setIsPlaying(value: boolean) {
 		isPlaying.value = value
+	}
+
+	// ========= ITEM METHODS
+
+	function addItemToInventory(item: Item): boolean {
+		if (inventory.value.length >= MAX_INVENTORY_SIZE) return false
+		inventory.value.push(item)
+		return true
+	}
+
+	function removeItemFromInventory(itemId: string): Item | null {
+		const index = inventory.value.findIndex(i => i.id === itemId)
+		if (index === -1) return null
+		const [item] = inventory.value.splice(index, 1)
+		return item || null
+	}
+
+	function addActiveEffect(effect: ItemEffect) {
+		activeEffects.value.push(effect)
+	}
+
+	function removeActiveEffect(effectType: ItemType) {
+		activeEffects.value = activeEffects.value.filter(e => e.type !== effectType)
+	}
+
+	function hasActiveEffect(effectType: ItemType): boolean {
+		return activeEffects.value.some(e => e.type === effectType && e.active)
+	}
+
+	function setItemSpawnMap(itemSpawns: Array<{index: number; type: ItemType}>) {
+		console.log('[ITEMS-DEBUG] setItemSpawnMap called with', itemSpawns.length, 'items')
+		itemSpawnMap.value = new Map(itemSpawns.map(item => [item.index, item.type]))
+		console.log('[ITEMS-DEBUG] Item spawn map size after setting:', itemSpawnMap.value.size)
+		console.log('[ITEMS-DEBUG] First 10 items in map:', Array.from(itemSpawnMap.value.entries()).slice(0, 10))
+	}
+
+	function incrementPieceIndex() {
+		currentPieceIndex.value++
+	}
+
+	function currentPieceHasItem(): boolean {
+		return itemSpawnMap.value.has(currentPieceIndex.value)
+	}
+
+	function getCurrentPieceItemType(): ItemType | null {
+		return itemSpawnMap.value.get(currentPieceIndex.value) || null
+	}
+
+	function clearItemStates() {
+		inventory.value = []
+		activeEffects.value = []
+		itemSpawnMap.value = new Map()
+		currentPieceIndex.value = 0
 	}
 	
 	// ========= GETTERS
@@ -127,7 +188,7 @@ export const useGameStore = defineStore('game', () => {
 			cancelAnimationFrame(animationFrameId.value)
 			animationFrameId.value = undefined
 		}
-		
+
 		grid.value = Array(ROWS).fill(null).map(() => Array(COLS).fill(null))
 		ghostGrids.value = {}
 		isAlive.value = true
@@ -152,6 +213,11 @@ export const useGameStore = defineStore('game', () => {
 			cancelAnimationFrame(disappearAnimationId.value)
 			disappearAnimationId.value = 0
 		}
+		// Don't clear item states here - they are set by the server before startGame is called
+		// Only clear inventory and active effects (not the spawn map)
+		inventory.value = []
+		activeEffects.value = []
+		currentPieceIndex.value = 0
 	}
 	
 	const tryMoveActivePiece = (dx: number, dy: number): boolean => {
@@ -271,6 +337,21 @@ export const useGameStore = defineStore('game', () => {
 		initQueue,
 		flatCells,
 		removeGhost,
-		linesCleared
+		linesCleared,
+		// Item system
+		inventory,
+		activeEffects,
+		itemSpawnMap,
+		currentPieceIndex,
+		addItemToInventory,
+		removeItemFromInventory,
+		addActiveEffect,
+		removeActiveEffect,
+		hasActiveEffect,
+		setItemSpawnMap,
+		incrementPieceIndex,
+		currentPieceHasItem,
+		getCurrentPieceItemType,
+		clearItemStates
 	}
 })

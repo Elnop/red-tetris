@@ -3,6 +3,8 @@ import { toNodeListener } from "h3"
 import { createServer } from "http"
 import type { NitroApp } from "nitropack"
 
+// Item generation is now handled client-side
+
 // Bright and well-distinct color palette
 const PLAYER_COLORS = [
   '#FF6B6B', // Bright red
@@ -27,6 +29,7 @@ const PLAYER_COLORS = [
   '#7209B7'  // Dark purple
 ]
 
+
 // Shuffle the color array for better distribution
 const shuffleArray = (array: any[]) => {
   const newArray = [...array]
@@ -48,6 +51,8 @@ type RoomState = {
 	users: User[]
 	running: boolean
 	lastSeed?: number
+	powerUpsEnabled: boolean
+	itemSpawnRate: number
 }
 
 export default (nitroApp: NitroApp) => {
@@ -141,22 +146,38 @@ export default (nitroApp: NitroApp) => {
 				callback({ available: false })
 				return
 			}
-			
+
 			const state = rooms[room]
 			if (!state) {
 				callback({ available: true })
 				return
 			}
-			
+
 			const isTaken = state.users.some(u => u.username === clean)
 			callback({ available: !isTaken })
 		})
+
+		socket.on("check-room-exists", ({ room }, callback) => {
+			const exists = !!rooms[room]
+			callback({ exists })
+		})
 		
-		socket.on("join-room", ({ room, username }) => {
+		socket.on("join-room", ({ room, username, powerUpsEnabled, itemSpawnRate }) => {
 			// IMPORTANT: join the Socket.IO room
 			socket.join(room)
-			
-			if (!rooms[room]) rooms[room] = { users: [], running: false }
+
+			console.log(`[ITEMS-DEBUG] join-room: ${username} joining ${room} with powerUps=${powerUpsEnabled}, spawnRate=${itemSpawnRate}`)
+
+			if (!rooms[room]) {
+				// Create new room with power-ups setting (default true for backward compatibility)
+				rooms[room] = {
+					users: [],
+					running: false,
+					powerUpsEnabled: powerUpsEnabled !== undefined ? powerUpsEnabled : true,
+					itemSpawnRate: itemSpawnRate !== undefined ? itemSpawnRate : 0.08
+				}
+				console.log(`[ITEMS-DEBUG] Created new room ${room} with powerUps=${rooms[room].powerUpsEnabled}, spawnRate=${rooms[room].itemSpawnRate}`)
+			}
 			const state = rooms[room]
 			
 			const clean = sanitizeUsername(username)
@@ -182,11 +203,17 @@ export default (nitroApp: NitroApp) => {
 			
 			// Send game state to the joining client
 			socket.emit("game-state", { isPlaying: state.running })
-			
+
+			// Send room settings to the joining client
+			socket.emit("room-settings", {
+				powerUpsEnabled: state.powerUpsEnabled,
+				itemSpawnRate: state.itemSpawnRate
+			})
+
 			// emit directly to the joining socket to avoid any race
 			socket.emit("room-users", { users: state.users })
 			emitLeader(room)
-			
+
 			// then broadcast to the whole room
 			broadcastUsers(room)
 			io.to(room).emit("user-joined", { username: clean })
@@ -240,10 +267,18 @@ export default (nitroApp: NitroApp) => {
 
 			state.running = true
 			state.lastSeed = seed
+
 			// Mark all players as alive
 			for (const user of state.users) user.alive = true
 			broadcastUsers(room) // Send updated list
-			io.to(room).emit("tetris-start", { seed })
+
+			// Send seed, power-ups setting, and spawn rate to all clients
+			// Items are now generated client-side
+			io.to(room).emit("tetris-start", {
+				seed,
+				powerUpsEnabled: state.powerUpsEnabled,
+				itemSpawnRate: state.itemSpawnRate
+			})
 		})
 
 		// Relay grids: payload { room, username, grid }
@@ -294,6 +329,23 @@ export default (nitroApp: NitroApp) => {
 				const lastPlayer = alivePlayers[0]?.username || ''
 				io.to(room).emit("game-ended", { winner: lastPlayer })
 			}
+		})
+
+		// Item used - validate and broadcast effects
+		socket.on("item-used", ({ room, username, itemType, targetUsername }) => {
+			const state = rooms[room]
+			if (!state) return
+
+			const user = state.users.find(u => u.username === username)
+			if (!user || !user.alive) return
+
+			// Broadcast the item effect to all players in the room
+			io.to(room).emit("item-effect", {
+				sourceUsername: username,
+				targetUsername: targetUsername || '',
+				itemType,
+				effectData: {}
+			})
 		})
 		
 		// socket.on("disconnect", (reason) => {

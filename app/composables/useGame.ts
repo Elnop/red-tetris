@@ -3,22 +3,28 @@ import { useGameStore } from "~/stores/useGameStore"
 import { useActivePiece } from "./useActivePiece"
 import { useGhosts } from "./useGhostDisplay"
 import { useBoard } from "./useBoard"
+import { useItems } from "./useItems"
 import { rotateActiveCW } from "~/utils/pieces"
 import { storeToRefs } from "pinia"
 import { useRoomStore } from "~/stores/useRoomStore"
 import { useUserStore } from "~/stores/useUserStore"
 import { useSocketEmiters } from './socketEmiters'
+import { ITEMS_CONFIG } from '~/utils/itemsConfig'
+import { useThemeStore } from '~/stores/useThemeStore'
 
 export function useGame() {
 	const gameStore = useGameStore()
 	const roomStore = useRoomStore()
 	const userStore = useUserStore()
+	const themeStore = useThemeStore()
 
 	const gameLoopInterval = ref<number | null>(null)
+	const flashingCells = ref<Set<number>>(new Set())
 
 	const activePiece = useActivePiece()
 	const ghosts = useGhosts()
 	const board = useBoard()
+	const items = useItems()
 	
 	const {
 		getNewDeltaTime,
@@ -68,6 +74,8 @@ export function useGame() {
 	const { onGhost, getGhostStyle } = ghosts
 
 	const { addGarbageLines } = board
+	const { useItem, applyItemEffect, hasActiveEffect } = items
+	const { inventory } = storeToRefs(gameStore)
 
 	function start() {
 		startGame(gameLoop)
@@ -121,11 +129,30 @@ export function useGame() {
 		}
 	}
 	
+	// Handle block bomb flash effect
+	const onBlockBombFlash = (event: Event) => {
+		const customEvent = event as CustomEvent<{ cells: Array<{ x: number; y: number }> }>
+		const cells = customEvent.detail.cells
+
+		// Convert cells to indices and add to flashing set
+		flashingCells.value.clear()
+		cells.forEach(({ x, y }) => {
+			const idx = y * COLS + x
+			flashingCells.value.add(idx)
+		})
+
+		// Remove flash after animation duration
+		setTimeout(() => {
+			flashingCells.value.clear()
+		}, 400) // 400ms flash duration
+	}
+
 	onMounted(() => {
 		window.addEventListener('keydown', onKeyDown)
 		window.addEventListener('keyup', onKeyUp)
 		window.addEventListener('tetris-start', onRoomStart as EventListener)
-		initGameSocketListeners(onGhost, onUserLeft, onPlayerLost, addGarbageLines)
+		window.addEventListener('block-bomb-flash', onBlockBombFlash as EventListener)
+		initGameSocketListeners(onGhost, onUserLeft, onPlayerLost, addGarbageLines, onItemEffect)
 		startGameLoop(gameLoop)
 	})
 
@@ -137,23 +164,41 @@ export function useGame() {
 		window.removeEventListener('keydown', onKeyDown)
 		window.removeEventListener('keyup', onKeyUp)
 		window.removeEventListener('tetris-start', onRoomStart as EventListener)
+		window.removeEventListener('block-bomb-flash', onBlockBombFlash as EventListener)
 		clearGameSocketListeners()
 		emitLeaveRoom()
 		clearGameStates()
 	})
 	
 	// ========= CONTROLS
-	
+
 	const onKeyDown = (e: KeyboardEvent) => {
-		if (!active.value || !isPlaying.value || !isAlive.value) return
+		if (!isPlaying.value || !isAlive.value) return
+
+		// Item usage keys (1-5) - only if power-ups are enabled
+		if (['1', '2', '3', '4', '5'].includes(e.key) && roomStore.powerUpsEnabled) {
+			e.preventDefault()
+			const itemIndex = parseInt(e.key) - 1
+			if (inventory.value[itemIndex]) {
+				useItem(inventory.value[itemIndex]!.id)
+			}
+			return
+		}
+
+		// Movement controls require active piece
+		if (!active.value) return
+
+		// Check if confusion effect is active (inverts controls)
+		const isConfused = hasActiveEffect('confusion')
+
 		switch (e.key) {
 			case 'ArrowLeft':
 			e.preventDefault()
-			tryMoveActivePiece(-1, 0)
+			tryMoveActivePiece(isConfused ? 1 : -1, 0)
 			break
 			case 'ArrowRight':
 			e.preventDefault()
-			tryMoveActivePiece(1, 0)
+			tryMoveActivePiece(isConfused ? -1 : 1, 0)
 			break
 			case 'ArrowDown':
 			e.preventDefault()
@@ -201,6 +246,37 @@ export function useGame() {
 		}
 	}
 
+	const onItemEffect = (payload: { sourceUsername: string; targetUsername: string; itemType: import('~/types/items').ItemType; effectData?: any }) => {
+		console.log('[ITEMS-DEBUG] Received item-effect:', payload)
+
+		const isSource = payload.sourceUsername === userStore.username
+		const config = ITEMS_CONFIG[payload.itemType]
+
+		// If no specific target (empty string)
+		if (!payload.targetUsername || payload.targetUsername === '') {
+			// Check if this is a self-targeting item
+			if (config.targetSelf && !config.targetOthers) {
+				// Self-only item - apply only if we are the source
+				if (isSource) {
+					console.log('[ITEMS-DEBUG] Applying self-only item to source')
+					applyItemEffect(payload.itemType, userStore.username)
+				}
+			} else {
+				// Other-targeting item - apply to everyone EXCEPT the source
+				if (!isSource) {
+					console.log('[ITEMS-DEBUG] Applying other-targeting item to non-source')
+					applyItemEffect(payload.itemType, '') // Empty string means "not self"
+				}
+			}
+		} else {
+			// Specific target - apply only if we are the target
+			if (payload.targetUsername === userStore.username) {
+				console.log('[ITEMS-DEBUG] Applying targeted item to specific target')
+				applyItemEffect(payload.itemType, payload.targetUsername)
+			}
+		}
+	}
+
 	const onKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'ArrowDown') setSoftDrop(false)
 	}
@@ -215,21 +291,34 @@ export function useGame() {
 	const cellStyle = (idx: number) => {
 		const { x, y } = getCellCoordinates(idx)
 		const cellValue = getCellValue(x, y)
-		
-		// Check for indestructible white lines first
+
+		// Check for flash effect first
+		if (flashingCells.value.has(idx)) {
+			const themeColor = themeStore.colors.primary
+			return {
+				background: themeColor,
+				borderColor: themeColor,
+				opacity: '0.7',
+				boxShadow: `0 0 15px ${themeColor}, inset 0 0 15px ${themeColor}`,
+				transition: 'all 0.2s ease-out',
+				animation: 'bomb-flash 0.4s ease-in-out'
+			}
+		}
+
+		// Check for indestructible white lines
 		if (cellValue === '#FFFFFF') {
 			return { background: '#FFFFFF', borderColor: '#FFFFFF' }
 		}
-		
+
 		// Check for active piece
 		const activeStyle = getActivePieceStyle(idx)
 		if (activeStyle) return activeStyle
-		
+
 		// Check for normal cell color
 		if (cellValue) {
 			return { background: cellValue, borderColor: cellValue }
 		}
-		
+
 		// Check for ghost pieces
 		return getGhostStyle(idx) || null
 	}

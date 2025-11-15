@@ -93,7 +93,9 @@ export function useSocketEmiters() {
 			if (!roomStore.roomId || !userStore.username || !socket) return;
 			socket.emit('join-room', {
 				room: roomStore.roomId,
-				username: userStore.username
+				username: userStore.username,
+				powerUpsEnabled: roomStore.powerUpsEnabled,
+				itemSpawnRate: roomStore.itemSpawnRate
 			});
 		};
 
@@ -109,14 +111,52 @@ export function useSocketEmiters() {
 			roomStore.setUsers(data.users)
 			userStore.setColor(data.users.find((u) => u.username === userStore.username)?.color || '#FFFFFF')
 		})
-		
+
 		socket.on("room-leader", (data: { username: string | null }) => {
 			roomStore.setLeader(data.username)
 		})
+
+		socket.on("room-settings", (data: { powerUpsEnabled: boolean; itemSpawnRate: number }) => {
+			console.log('[ITEMS-DEBUG] Received room-settings:', data)
+			roomStore.setPowerUpsEnabled(data.powerUpsEnabled)
+			roomStore.setItemSpawnRate(data.itemSpawnRate)
+		})
 		
-		socket.on("tetris-start", ({ seed }: { seed: number }) => {
+		socket.on("tetris-start", async ({ seed, powerUpsEnabled, itemSpawnRate }: { seed: number; powerUpsEnabled?: boolean; itemSpawnRate?: number }) => {
+			console.log('[ITEMS-DEBUG] Received tetris-start:', { seed, powerUpsEnabled, itemSpawnRate })
 			setIsRunning(true)
 			setGameFinished(false)
+
+			// Update power-ups setting from server
+			if (powerUpsEnabled !== undefined) {
+				roomStore.setPowerUpsEnabled(powerUpsEnabled)
+				console.log('[ITEMS-DEBUG] Power-ups enabled:', powerUpsEnabled)
+			}
+
+			// Update item spawn rate from server
+			if (itemSpawnRate !== undefined) {
+				roomStore.setItemSpawnRate(itemSpawnRate)
+				console.log('[ITEMS-DEBUG] Item spawn rate:', itemSpawnRate)
+			}
+
+			// Generate items locally (random and desynchronized per client)
+			if (powerUpsEnabled) {
+				const { generateRandomItemSpawns } = await import('~/utils/itemGeneration')
+				const localItemSpawns = generateRandomItemSpawns(itemSpawnRate || 0.08, 200)
+
+				// Convert Map to array format for setItemSpawnMap
+				const itemSpawnsArray = Array.from(localItemSpawns.entries()).map(([index, type]) => ({
+					index,
+					type
+				}))
+
+				console.log('[ITEMS-DEBUG] Generated', itemSpawnsArray.length, 'random items locally')
+				gameStore.setItemSpawnMap(itemSpawnsArray)
+			} else {
+				console.log('[ITEMS-DEBUG] Power-ups disabled, no items generated')
+				gameStore.setItemSpawnMap([])
+			}
+
 			window.dispatchEvent(new CustomEvent("tetris-start", { detail: { seed } }))
 		})
 		
@@ -145,7 +185,8 @@ export function useSocketEmiters() {
 		}: {
 			username: string;
 		}) => void,
-		addGarbageLines: (count: number) => void
+		addGarbageLines: (count: number) => void,
+		onItemEffect?: (payload: any) => void
 	) {
 		socket.on('game-state', ({ isPlaying }: { isPlaying: boolean }) => {
 			gameStore.setIsPlaying(isPlaying)
@@ -154,11 +195,17 @@ export function useSocketEmiters() {
 		socket.on('user-left', onUserLeft)
 		socket.on('player-lost', onPlayerLost)
 		socket.on('tetris-receive-lines', ({ count }) => addGarbageLines(count))
+
+		// Item effect listeners
+		if (onItemEffect) {
+			socket.on('item-effect', onItemEffect)
+		}
 	}
 	
 	function clearRoomSocketListeners() {
 		socket.off("room-users")
 		socket.off("room-leader")
+		socket.off("room-settings")
 		socket.off("tetris-start")
 		socket.off("game-ended")
 	}
@@ -170,6 +217,8 @@ export function useSocketEmiters() {
 		socket.off('tetris-win')
 		socket.off('tetris-receive-lines')
 		socket.off('game-state')
+		socket.off('item-effect')
+		socket.off('item-spawn')
 	}
 	
 	return {
