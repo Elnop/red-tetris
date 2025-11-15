@@ -148,6 +148,9 @@ const startForRoom = () => {
 				</div>
 		</div>
 
+		<!-- Next Pieces Queue -->
+		<NextPieces v-if="isRunning" class="next-pieces-section" />
+
 		<!-- Item Inventory (only if power-ups are enabled) -->
 		<ItemInventory v-if="isRunning && roomStore.powerUpsEnabled" class="item-inventory-section" />
 
@@ -475,6 +478,11 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+}
+
+.next-pieces-section {
+	width: 100%;
+	margin-bottom: 15px;
 }
 
 .item-inventory-section {

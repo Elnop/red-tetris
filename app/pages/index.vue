@@ -23,8 +23,8 @@ const handleTitleClick = () => {
 
 // UI State
 const mode = ref<'join' | 'create'>('join')
-const powerUpsEnabled = ref(true)
-const itemSpawnRate = ref(8) // Default 8%
+const powerUpsEnabled = ref(false)
+const itemSpawnRate = ref(25) // Default 25%
 const errorMessage = ref('')
 const isLoading = ref(false)
 
@@ -291,25 +291,25 @@ async function createHandler() {
 					borderColor: themeStore.colors.secondary,
 					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
 				}">
-					<div class="power-up-icon">💣</div>
-					<div class="power-up-name">Add Lines</div>
-					<div class="power-up-desc">Envoie 2 lignes de garbage à tous les adversaires</div>
+					<div class="power-up-icon">🎁</div>
+					<div class="power-up-name">Poisoned Gift</div>
+					<div class="power-up-desc">Envoie 1 ligne de garbage à tous les adversaires</div>
 				</div>
 				<div class="power-up-card" :style="{
 					borderColor: themeStore.colors.secondary,
 					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
 				}">
-					<div class="power-up-icon">🐌</div>
-					<div class="power-up-name">Speed Down</div>
-					<div class="power-up-desc">Ralentit votre vitesse de chute pendant 8 secondes</div>
+					<div class="power-up-icon">🍀</div>
+					<div class="power-up-name">Item Rush</div>
+					<div class="power-up-desc">Augmente à 100% la chance d'avoir des items pendant 12 secondes</div>
 				</div>
 				<div class="power-up-card" :style="{
 					borderColor: themeStore.colors.secondary,
 					background: `linear-gradient(135deg, ${themeStore.colors.secondary}15 0%, ${themeStore.colors.primary}15 100%)`
 				}">
-					<div class="power-up-icon">✨</div>
-					<div class="power-up-name">Clear Random</div>
-					<div class="power-up-desc">Efface 8 blocs aléatoires de votre grille</div>
+					<div class="power-up-icon">🌊</div>
+					<div class="power-up-name">Ground Breaker</div>
+					<div class="power-up-desc">Détruit la ligne la plus basse et fait descendre tout le reste</div>
 				</div>
 				<div class="power-up-card" :style="{
 					borderColor: themeStore.colors.secondary,
@@ -411,8 +411,9 @@ async function createHandler() {
 
 html, body {
 	height: 100vh;
-	width: 100vw;
+	width: 100%;
 	overflow-x: hidden;
+	overflow-y: auto;
 	margin: 0;
 	padding: 0;
 }
@@ -421,7 +422,7 @@ body {
 	margin: 0;
 	font-family: 'Press Start 2P', monospace;
 	position: relative;
-	width: 100vw;
+	width: 100%;
 }
 
 .page-container {
@@ -431,10 +432,11 @@ body {
 	justify-content: flex-start;
 	min-height: 100%;
 	text-align: center;
-	width: 100vw;
+	width: 100%;
+	max-width: 100%;
 	padding: 40px 20px 0 20px;
 	box-sizing: border-box;
-	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 .project-title {

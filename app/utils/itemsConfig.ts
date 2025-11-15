@@ -11,26 +11,26 @@ export const ITEMS_CONFIG: Record<ItemType, ItemConfig> = {
 	},
 	[ItemType.ADD_LINES]: {
 		type: ItemType.ADD_LINES,
-		name: 'Add Lines',
-		icon: '💣',
-		description: 'Envoie 2 lignes de garbage à tous les adversaires',
+		name: 'Poisoned Gift',
+		icon: '🎁',
+		description: 'Envoie 1 ligne de garbage à tous les adversaires',
 		targetSelf: false,
 		targetOthers: true
 	},
-	[ItemType.SPEED_DOWN]: {
-		type: ItemType.SPEED_DOWN,
-		name: 'Speed Down',
-		icon: '🐌',
-		description: 'Ralentit votre vitesse de chute pendant 8 secondes',
-		duration: 8000,
+	[ItemType.ITEM_RUSH]: {
+		type: ItemType.ITEM_RUSH,
+		name: 'Item Rush',
+		icon: '🍀',
+		description: 'Augmente à 100% la chance d\'avoir des items pendant 12 secondes',
+		duration: 12000,
 		targetSelf: true,
 		targetOthers: false
 	},
-	[ItemType.CLEAR_RANDOM]: {
-		type: ItemType.CLEAR_RANDOM,
-		name: 'Clear Random',
-		icon: '✨',
-		description: 'Efface 8 blocs aléatoires de votre grille',
+	[ItemType.GROUND_BREAKER]: {
+		type: ItemType.GROUND_BREAKER,
+		name: 'Ground Breaker',
+		icon: '🌊',
+		description: 'Détruit la ligne la plus basse et fait descendre tout le reste',
 		targetSelf: true,
 		targetOthers: false
 	},
@@ -77,3 +77,9 @@ export const MAX_INVENTORY_SIZE = 5
 
 // Export array of all item types for random selection
 export const ITEM_TYPES = Object.values(ItemType)
+
+// Utility function to get a random item type
+export function getRandomItemType(): ItemType {
+	const randomIndex = Math.floor(Math.random() * ITEM_TYPES.length)
+	return ITEM_TYPES[randomIndex] as ItemType
+}

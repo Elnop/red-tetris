@@ -1,8 +1,8 @@
 export enum ItemType {
 	BLOCK_BOMB = 'block_bomb',
 	ADD_LINES = 'add_lines',
-	SPEED_DOWN = 'speed_down',
-	CLEAR_RANDOM = 'clear_random',
+	ITEM_RUSH = 'item_rush',
+	GROUND_BREAKER = 'ground_breaker',
 	CONFUSION = 'confusion',
 	FREEZE = 'freeze',
 	IMMUNITY = 'immunity',

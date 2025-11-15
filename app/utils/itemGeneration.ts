@@ -24,6 +24,5 @@ export function generateRandomItemSpawns(spawnRate: number, totalPieces: number 
 		}
 	}
 
-	console.log(`[ITEMS-GEN] Generated ${itemSpawns.size} random items for ${totalPieces} pieces (spawn rate: ${spawnRate * 100}%)`)
 	return itemSpawns
 }

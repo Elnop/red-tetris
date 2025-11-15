@@ -117,26 +117,22 @@ export function useSocketEmiters() {
 		})
 
 		socket.on("room-settings", (data: { powerUpsEnabled: boolean; itemSpawnRate: number }) => {
-			console.log('[ITEMS-DEBUG] Received room-settings:', data)
 			roomStore.setPowerUpsEnabled(data.powerUpsEnabled)
 			roomStore.setItemSpawnRate(data.itemSpawnRate)
 		})
-		
+
 		socket.on("tetris-start", async ({ seed, powerUpsEnabled, itemSpawnRate }: { seed: number; powerUpsEnabled?: boolean; itemSpawnRate?: number }) => {
-			console.log('[ITEMS-DEBUG] Received tetris-start:', { seed, powerUpsEnabled, itemSpawnRate })
 			setIsRunning(true)
 			setGameFinished(false)
 
 			// Update power-ups setting from server
 			if (powerUpsEnabled !== undefined) {
 				roomStore.setPowerUpsEnabled(powerUpsEnabled)
-				console.log('[ITEMS-DEBUG] Power-ups enabled:', powerUpsEnabled)
 			}
 
 			// Update item spawn rate from server
 			if (itemSpawnRate !== undefined) {
 				roomStore.setItemSpawnRate(itemSpawnRate)
-				console.log('[ITEMS-DEBUG] Item spawn rate:', itemSpawnRate)
 			}
 
 			// Generate items locally (random and desynchronized per client)
@@ -150,10 +146,8 @@ export function useSocketEmiters() {
 					type
 				}))
 
-				console.log('[ITEMS-DEBUG] Generated', itemSpawnsArray.length, 'random items locally')
 				gameStore.setItemSpawnMap(itemSpawnsArray)
 			} else {
-				console.log('[ITEMS-DEBUG] Power-ups disabled, no items generated')
 				gameStore.setItemSpawnMap([])
 			}
 

@@ -107,34 +107,25 @@ export default (nitroApp: NitroApp) => {
 	}
 	
 	const removeUser = (room: string, username: string) => {
-		console.log(`[REMOVE-USER] Attempting to remove ${username} from room ${room}`)
 		const state = rooms[room]
 		if (!state) {
-			console.log(`[REMOVE-USER] Failed: room ${room} does not exist`)
 			return
 		}
 
 		const before = state.users.length
 		state.users = state.users.filter((u) => {
 			const shouldKeep = u.username !== username
-			if (!shouldKeep) {
-				console.log(`[REMOVE-USER] Removing user: ${u.username} (${u.socketId})`)
-			}
 			return shouldKeep
 		})
 
 		cleanRoom(room)
 
 		if (state.users.length !== before) {
-			console.log(`[REMOVE-USER] Notifying disconnection of ${username} in room ${room}`)
 			io.to(room).emit("user-left", username)
 			broadcastUsers(room)
-		} else {
-			console.log(`[REMOVE-USER] No user removed (${username} not found)`)
 		}
 
 		if (state.users.length === 0) {
-			console.log(`[REMOVE-USER] Deleting room ${room} because it is empty`)
 			delete rooms[room]
 		}
 	}
@@ -166,8 +157,6 @@ export default (nitroApp: NitroApp) => {
 			// IMPORTANT: join the Socket.IO room
 			socket.join(room)
 
-			console.log(`[ITEMS-DEBUG] join-room: ${username} joining ${room} with powerUps=${powerUpsEnabled}, spawnRate=${itemSpawnRate}`)
-
 			if (!rooms[room]) {
 				// Create new room with power-ups setting (default true for backward compatibility)
 				rooms[room] = {
@@ -176,7 +165,6 @@ export default (nitroApp: NitroApp) => {
 					powerUpsEnabled: powerUpsEnabled !== undefined ? powerUpsEnabled : true,
 					itemSpawnRate: itemSpawnRate !== undefined ? itemSpawnRate : 0.08
 				}
-				console.log(`[ITEMS-DEBUG] Created new room ${room} with powerUps=${rooms[room].powerUpsEnabled}, spawnRate=${rooms[room].itemSpawnRate}`)
 			}
 			const state = rooms[room]
 			
@@ -220,12 +208,9 @@ export default (nitroApp: NitroApp) => {
 		})
 		
 		socket.on("leave-room", ({ room, username }, callback) => {
-			console.log(`[LEAVE-ROOM] Start - Room: ${room}, Username: ${username}, Socket ID: ${socket.id}`)
-
 			// Check if the user is in the room
 			const currentRoom = rooms[room]
 			if (!currentRoom) {
-				console.log(`[LEAVE-ROOM] Room ${room} does not exist`)
 				callback?.({ success: false, error: 'Room does not exist' })
 				return
 			}
@@ -238,7 +223,6 @@ export default (nitroApp: NitroApp) => {
 			const userIndex = currentRoom.users.findIndex(u => u.username === username)
 			if (userIndex !== -1) {
 				currentRoom.users.splice(userIndex, 1)
-				console.log(`[LEAVE-ROOM] User ${username} removed from room ${room}`)
 			}
 
 			// Notify other users
@@ -247,11 +231,9 @@ export default (nitroApp: NitroApp) => {
 
 			// Clean up the room if empty
 			if (currentRoom.users.length === 0) {
-				console.log(`[LEAVE-ROOM] Deleting room ${room} because it is empty`)
 				delete rooms[room]
 			}
 
-			console.log(`[LEAVE-ROUN] End - User ${username} left room ${room}`)
 			callback?.({ success: true })
 		})
 		
@@ -367,8 +349,6 @@ export default (nitroApp: NitroApp) => {
 	// ⚠️ Start the custom HTTP server only at runtime, not during build
 	// @ts-ignore
 	if (!import.meta.prerender) {
-		httpServer.listen(3001, "0.0.0.0", () => {
-			console.log("✅ Socket.IO server listening on port 3001")
-		})
+		httpServer.listen(3001, "0.0.0.0")
 	}
 }

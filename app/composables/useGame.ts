@@ -109,20 +109,21 @@ export function useGame() {
 	
 	const tick = (dtMs: number): void => {
 		if (!isPlaying.value || !isAlive.value || !active.value) return
-		
+
+		// If frozen, don't drop pieces
+		if (hasActiveEffect('freeze')) return
+
 		const currentBaseDropMs = getCurrentBaseDropSpeed()
 		if (currentBaseDropMs === undefined) {
-			console.warn('currentBaseDropMs is undefined, using fallback value')
 			return
 		}
-		
+
 		const currentSpeed = softDrop.value ? SOFT_DROP_MS : currentBaseDropMs
-		
+
 		if (currentSpeed === undefined) {
-			console.warn('currentSpeed is undefined, using fallback value')
 			return
 		}
-		
+
 		setDropTimer(dropTimer.value + dtMs)
 		if (dropTimer.value >= currentSpeed) {
 			handleDrop()
@@ -188,6 +189,9 @@ export function useGame() {
 		// Movement controls require active piece
 		if (!active.value) return
 
+		// If frozen, block all movement controls
+		if (hasActiveEffect('freeze')) return
+
 		// Check if confusion effect is active (inverts controls)
 		const isConfused = hasActiveEffect('confusion')
 
@@ -247,8 +251,6 @@ export function useGame() {
 	}
 
 	const onItemEffect = (payload: { sourceUsername: string; targetUsername: string; itemType: import('~/types/items').ItemType; effectData?: any }) => {
-		console.log('[ITEMS-DEBUG] Received item-effect:', payload)
-
 		const isSource = payload.sourceUsername === userStore.username
 		const config = ITEMS_CONFIG[payload.itemType]
 
@@ -258,20 +260,17 @@ export function useGame() {
 			if (config.targetSelf && !config.targetOthers) {
 				// Self-only item - apply only if we are the source
 				if (isSource) {
-					console.log('[ITEMS-DEBUG] Applying self-only item to source')
 					applyItemEffect(payload.itemType, userStore.username)
 				}
 			} else {
 				// Other-targeting item - apply to everyone EXCEPT the source
 				if (!isSource) {
-					console.log('[ITEMS-DEBUG] Applying other-targeting item to non-source')
 					applyItemEffect(payload.itemType, '') // Empty string means "not self"
 				}
 			}
 		} else {
 			// Specific target - apply only if we are the target
 			if (payload.targetUsername === userStore.username) {
-				console.log('[ITEMS-DEBUG] Applying targeted item to specific target')
 				applyItemEffect(payload.itemType, payload.targetUsername)
 			}
 		}

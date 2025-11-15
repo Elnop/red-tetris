@@ -5,7 +5,7 @@ import type { Item, ItemEffect, ItemType } from "~/types/items"
 import { generateQueue, generateQueueFromSeed, toCoords, type ActivePiece } from "~/utils/pieces"
 import { useUserStore } from "./useUserStore"
 import { useRoomStore } from "./useRoomStore"
-import { MAX_INVENTORY_SIZE } from "~/utils/itemsConfig"
+import { MAX_INVENTORY_SIZE, getRandomItemType } from "~/utils/itemsConfig"
 
 export const useGameStore = defineStore('game', () => {
 	const FPS = 60
@@ -80,16 +80,12 @@ export const useGameStore = defineStore('game', () => {
 	function setGridCell(x: number, y: number, value: BoardCell) {
 		if (y >= 0 && y < ROWS && x >= 0 && x < COLS)
 			grid.value[y]![x] = value
-		else
-		console.warn(`Invalid grid cell coordinates: x=${x}, y=${y}`)
 	}
-	
-	
+
+
 	function setLine(y: number, value: BoardCell[]) {
 		if (y >= 0 && y < ROWS)
 			grid.value[y] = value
-		else
-		console.warn(`Invalid grid line index: y=${y}`)
 	}
 	
 	function setPosX(value: number) {
@@ -136,10 +132,7 @@ export const useGameStore = defineStore('game', () => {
 	}
 
 	function setItemSpawnMap(itemSpawns: Array<{index: number; type: ItemType}>) {
-		console.log('[ITEMS-DEBUG] setItemSpawnMap called with', itemSpawns.length, 'items')
 		itemSpawnMap.value = new Map(itemSpawns.map(item => [item.index, item.type]))
-		console.log('[ITEMS-DEBUG] Item spawn map size after setting:', itemSpawnMap.value.size)
-		console.log('[ITEMS-DEBUG] First 10 items in map:', Array.from(itemSpawnMap.value.entries()).slice(0, 10))
 	}
 
 	function incrementPieceIndex() {
@@ -147,10 +140,21 @@ export const useGameStore = defineStore('game', () => {
 	}
 
 	function currentPieceHasItem(): boolean {
+		// If Item Rush is active, all pieces have items
+		if (hasActiveEffect('item_rush' as ItemType)) {
+			return true
+		}
+		// Otherwise, check the pre-generated item spawn map
 		return itemSpawnMap.value.has(currentPieceIndex.value)
 	}
 
 	function getCurrentPieceItemType(): ItemType | null {
+		// If Item Rush is active, generate a random item
+		if (hasActiveEffect('item_rush' as ItemType)) {
+			const randomItem = getRandomItemType()
+			return randomItem
+		}
+		// Otherwise, get item from pre-generated map
 		return itemSpawnMap.value.get(currentPieceIndex.value) || null
 	}
 

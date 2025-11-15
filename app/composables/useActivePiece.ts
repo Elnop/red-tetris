@@ -109,16 +109,11 @@ export function useActivePiece() {
 	const lockPiece = () => {
 		mergeActiveToGrid()
 
-		console.log('[ITEMS-DEBUG] Locking piece. Current piece index:', currentPieceIndex.value, 'Item type:', currentPieceItemType.value, 'Map size:', itemSpawnMap.value.size)
-
 		// Check if this piece had an item and collect it (only if power-ups are enabled)
 		if (currentPieceItemType.value && itemSpawnMap.value.size > 0) {
-			console.log('[ITEMS-DEBUG] Collecting item:', currentPieceItemType.value)
 			const items = useItems()
 			items.collectItem(currentPieceItemType.value)
 			currentPieceItemType.value = null
-		} else {
-			console.log('[ITEMS-DEBUG] No item to collect (hasItemType:', !!currentPieceItemType.value, ', mapSize:', itemSpawnMap.value.size, ')')
 		}
 
 		clearLines()
@@ -151,16 +146,12 @@ export function useActivePiece() {
 				setPosX(spawnX)
 				setPosY(spawnY)
 
-				console.log('[ITEMS-DEBUG] Spawning piece at index:', currentPieceIndex.value, 'Map size:', itemSpawnMap.value.size)
-
 				// Check if this piece has an item
 				if (currentPieceHasItem()) {
 					// Get the item type from server-generated data
 					currentPieceItemType.value = getCurrentPieceItemType()
-					console.log('[ITEMS-DEBUG] Piece has item! Type:', currentPieceItemType.value)
 				} else {
 					currentPieceItemType.value = null
-					console.log('[ITEMS-DEBUG] Piece has no item')
 				}
 
 				// Increment piece index for next spawn

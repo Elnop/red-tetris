@@ -19,7 +19,8 @@ export function useBoard() {
 		setLine,
 		setPosY,
 		setActive,
-		setIsAlive
+		setIsAlive,
+		hasActiveEffect
 	} = gameStore
 
 	const {
@@ -98,6 +99,12 @@ export function useBoard() {
 
 	const addGarbageLines = (count: number) => {
 		if (!isAlive.value) return
+
+		// If immunity is active, block garbage lines
+		if (hasActiveEffect('immunity')) {
+			return
+		}
+
 		// Shift the grid upward
 		for (let y = 0; y < ROWS - count; y++) {
 			setLine(y, grid.value[y + count]!)
