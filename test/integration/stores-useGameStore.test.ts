@@ -64,16 +64,17 @@ describe('useGameStore', () => {
       expect(gameStore.grid[10]![5]).toBe('red')
     })
 
-    it('should handle invalid grid coordinates', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      
+    it('should ignore invalid grid coordinates', () => {
+      const originalCell = gameStore.grid[5]![5]
+
+      // These should be silently ignored without throwing
       gameStore.setGridCell(-1, 5, 'red')
       gameStore.setGridCell(15, 5, 'red')
       gameStore.setGridCell(5, -1, 'red')
       gameStore.setGridCell(5, 25, 'red')
-      
-      expect(consoleSpy).toHaveBeenCalledTimes(4)
-      consoleSpy.mockRestore()
+
+      // Grid should remain unchanged
+      expect(gameStore.grid[5]![5]).toBe(originalCell)
     })
 
     it('should set line correctly', () => {
@@ -82,14 +83,15 @@ describe('useGameStore', () => {
       expect(gameStore.grid[5]).toEqual(testLine)
     })
 
-    it('should handle invalid line index', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      
+    it('should ignore invalid line index', () => {
+      const originalGrid = JSON.parse(JSON.stringify(gameStore.grid))
+
+      // These should be silently ignored without throwing
       gameStore.setLine(-1, Array(10).fill('red'))
       gameStore.setLine(25, Array(10).fill('red'))
-      
-      expect(consoleSpy).toHaveBeenCalledTimes(2)
-      consoleSpy.mockRestore()
+
+      // Grid should remain unchanged
+      expect(gameStore.grid).toEqual(originalGrid)
     })
   })
 

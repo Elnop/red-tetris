@@ -126,13 +126,17 @@ describe('useSocketEmiters', () => {
     it('should emit join room event when connected', () => {
       roomStore.setRoomId('game-room')
       userStore.username = 'player1'
+      roomStore.setPowerUpsEnabled(true)
+      roomStore.setItemSpawnRate(0.08)
       mockSocket.connected = true
-      
+
       socketEmiters.emitJoinRoom()
-      
+
       expect(mockSocket.emit).toHaveBeenCalledWith('join-room', {
         room: 'game-room',
-        username: 'player1'
+        username: 'player1',
+        powerUpsEnabled: true,
+        itemSpawnRate: 0.08
       })
     })
 
